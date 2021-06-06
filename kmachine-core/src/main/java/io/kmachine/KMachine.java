@@ -32,14 +32,16 @@ import org.apache.kafka.streams.processor.ProcessorContext;
 import org.apache.kafka.streams.state.KeyValueStore;
 import org.apache.kafka.streams.state.StoreBuilder;
 import org.apache.kafka.streams.state.Stores;
+import org.graalvm.polyglot.Context;
+import org.graalvm.polyglot.Engine;
+import org.graalvm.polyglot.Source;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.Closeable;
 import java.util.Map;
 import java.util.Properties;
 
-public class KMachine implements Closeable {
+public class KMachine implements AutoCloseable {
 
     private static final Logger log = LoggerFactory.getLogger(KMachine.class);
 
@@ -102,24 +104,34 @@ public class KMachine implements Closeable {
 
         private ProcessorContext context;
         private KeyValueStore<JsonNode, JsonNode> store;
+        private Engine engine;
 
         @SuppressWarnings("unchecked")
         @Override
         public void init(final ProcessorContext context) {
             this.context = context;
             this.store = context.getStateStore(storeName);
+            this.engine = Engine.create();
         }
 
         @Override
         public Iterable<KeyValue<JsonNode, JsonNode>> transform(
             final JsonNode readOnlyKey, final JsonNode value
         ) {
+            Source source = Source.create("js", "21 + 21");
+            try (Context context = Context.newBuilder()
+                .engine(engine)
+                .build()) {
+                int v = context.eval(source).asInt();
+                assert v == 42;
+            }
             store.put(readOnlyKey, value);
             return null;
         }
 
         @Override
         public void close() {
+            engine.close();
         }
     }
 }
