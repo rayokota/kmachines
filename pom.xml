@@ -190,6 +190,9 @@
                                 </goals>
                             </execution>
                         </executions>
+                        <configuration>
+                            <source>11</source>
+                        </configuration>
                     </plugin>
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
@@ -255,8 +258,7 @@
                     <version>3.8.1</version>
                     <inherited>true</inherited>
                     <configuration>
-                        <source>1.8</source>
-                        <target>1.8</target>
+                        <release>11</release>
                     </configuration>
                 </plugin>
 
