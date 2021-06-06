@@ -1,0 +1,70 @@
+---
+version: '2'
+services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper:5.4.0
+    hostname: zookeeper
+    ports:
+      - '32181:32181'
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 32181
+      ZOOKEEPER_TICK_TIME: 2000
+    extra_hosts:
+      - "moby:127.0.0.1"
+
+  kafka:
+    image: confluentinc/cp-kafka:5.4.0
+    hostname: kafka
+    ports:
+      - '9092:9092'
+      - '29092:29092'
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:32181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    extra_hosts:
+      - "moby:127.0.0.1"
+
+  # Runs the KMachine REST application
+  kmachine-rest-app-1:
+    image: rayokota/kmachine-rest-app:latest
+    hostname: kmachine-rest-app
+    depends_on:
+      - kafka
+      - zookeeper
+    command: "bash -c 'echo Waiting for Kafka to be ready... && \
+                       cub zk-ready zookeeper:32181 20 && \
+                       cub kafka-ready -b kafka:29092 1 20 && \
+                       /usr/bin/java -Dfile.encoding=UTF-8 -Dserver.port=8888 -jar app.jar'"
+    ports:
+      - '8888:8888'
+    environment:
+      BOOTSTRAP_SERVERS: kafka:29092
+      ZOOKEEPER_CONNECT: zookeeper:32181
+      REST_APP_PORT: 8888
+    extra_hosts:
+      - "moby:127.0.0.1"
+
+  kmachine-rest-app-2:
+    image: rayokota/kmachine-rest-app:latest
+    hostname: kmachine-rest-app
+    depends_on:
+      - kafka
+      - zookeeper
+    command: "bash -c 'echo Waiting for Kafka to be ready... && \
+                       cub zk-ready zookeeper:32181 20 && \
+                       cub kafka-ready -b kafka:29092 1 20 && \
+                       /usr/bin/java -Dfile.encoding=UTF-8 -Dserver.port=8889 -jar app.jar'"
+    ports:
+      - '8889:8889'
+    environment:
+      BOOTSTRAP_SERVERS: kafka:29092
+      ZOOKEEPER_CONNECT: zookeeper:32181
+      REST_APP_PORT: 8889
+    extra_hosts:
+      - "moby:127.0.0.1"
