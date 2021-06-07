@@ -21,6 +21,7 @@ package io.kmachine;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.IntNode;
 import com.fasterxml.jackson.databind.node.TextNode;
+import io.kmachine.model.StateMachine;
 import io.kmachine.utils.ClientUtils;
 import io.kmachine.utils.JsonSerde;
 import io.kmachine.utils.StreamUtils;
@@ -70,7 +71,7 @@ public class KMachineTest extends AbstractIntegrationTest {
         streams.start();
 
         Map<String, Object> configs = new HashMap<>();
-        machine = new KMachine(null, suffix, CLUSTER.bootstrapServers(), "input", configs);
+        machine = new KMachine(null, suffix, CLUSTER.bootstrapServers(), "input", new StateMachine());
         streamsConfiguration = ClientUtils.streamsConfig("run-" + suffix, "run-client-" + suffix,
             CLUSTER.bootstrapServers(), JsonSerde.class, JsonSerde.class);
         streams = machine.configure(new StreamsBuilder(), streamsConfiguration).streams();
@@ -89,6 +90,8 @@ public class KMachineTest extends AbstractIntegrationTest {
 
     @After
     public void tearDown() throws Exception {
-        machine.close();
+        if (machine != null) {
+            machine.close();
+        }
     }
 }
