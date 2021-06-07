@@ -31,9 +31,9 @@ services:
       - "moby:127.0.0.1"
 
   # Runs the KMachine REST application
-  kmachine-rest-app-1:
-    image: rayokota/kmachine-rest-app:latest
-    hostname: kmachine-rest-app
+  kmachines-rest-app-1:
+    image: rayokota/kmachines-rest-app:latest
+    hostname: kmachines-rest-app
     depends_on:
       - kafka
       - zookeeper
@@ -50,9 +50,9 @@ services:
     extra_hosts:
       - "moby:127.0.0.1"
 
-  kmachine-rest-app-2:
-    image: rayokota/kmachine-rest-app:latest
-    hostname: kmachine-rest-app
+  kmachines-rest-app-2:
+    image: rayokota/kmachines-rest-app:latest
+    hostname: kmachines-rest-app
     depends_on:
       - kafka
       - zookeeper

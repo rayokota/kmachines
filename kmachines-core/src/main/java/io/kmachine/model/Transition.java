@@ -31,6 +31,7 @@ public class Transition {
 
     private String type;
     private String from;
+    // If to is null, it is an internal transition
     private String to;
     private String guard;
     private String onTransition;

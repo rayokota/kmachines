@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import java.util.Map;
 import java.util.Objects;
 
 @JsonInclude(Include.NON_NULL)

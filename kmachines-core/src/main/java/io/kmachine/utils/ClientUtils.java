@@ -35,7 +35,6 @@ import java.nio.file.Path;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Properties;
-import java.util.Random;
 
 public class ClientUtils {
     private static final Logger log = LoggerFactory.getLogger(ClientUtils.class);
@@ -183,29 +182,5 @@ public class ClientUtils {
         AdminClient adminClient = AdminClient.create(props);
         adminClient.createTopics(Collections.singletonList(newTopic));
         adminClient.close();
-    }
-
-    public static String generateRandomHexString(int len) {
-        Random random = new Random();
-        StringBuilder sb = new StringBuilder();
-        // Generate int(len/2)+1 random bytes.
-        final byte[] randomBytes = new byte[(len / 2) + 1];
-        random.nextBytes(randomBytes);
-
-        // Convert each byte to 2 hex digits.
-        for (byte randomByte : randomBytes) {
-            // Add 128 to byte value to make interval 0-255 before
-            // conversion to hex.
-            // This guarantees <= 2 hex digits from "toHexString".
-            // "toHexString" would otherwise add 2^32 to negative arguments.
-            String hex = Integer.toHexString(((int) randomByte) + 128);
-
-            // Make sure we add 2 hex digits for each byte.
-            if (hex.length() == 1) {
-                hex = "0" + hex;
-            }
-            sb.append(hex);
-        }
-        return sb.toString().substring(0, len);
     }
 }

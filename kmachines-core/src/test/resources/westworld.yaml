@@ -1,0 +1,131 @@
+name: WestWorld
+init: goHomeAndSleepTilRested
+states:
+  - name: enterMineAndDigForNugget
+    onEntry: enterMineAction
+    onExit: exitMineAction
+  - name: visitBankAndDepositGold
+    onEntry: enterBankAction
+    onExit: exitBankAction
+  - name: goHomeAndSleepTilRested
+    onEntry: enterHomeAction
+    onExit: exitHomeAction
+  - name: quenchThirst
+    onEntry: enterSaloonAction
+    onExit: exitSaloonAction
+transitions:
+  - type: stayInMine
+    from: enterMineAndDigForNugget
+    to:
+    guard:
+    onTransition: stayInMineAction
+  - type: visitBank
+    from: enterMineAndDigForNugget
+    to: visitBankAndDepositGold
+    guard:
+    onTransition:
+  - type: quenchThirst
+    from: enterMineAndDigForNugget
+    to: quenchThirst
+    guard:
+    onTransition:
+  - type: goHome
+    from: visitBankAndDepositGold
+    to: goHomeAndSleepTilRested
+    guard:
+    onTransition:
+  - type: enterMine
+    from: visitBankAndDepositGold
+    to: enterMineAndDigForNugget
+    guard:
+    onTransition:
+  - type: stayHome
+    from: goHomeAndSleepTilRested
+    to:
+    guard:
+    onTransition: stayHomeAction
+data:
+  location: shack
+  goldCarried: 0
+  moneyInBank: 0
+  thirst: 0
+  fatigue: 0
+functions:
+  enterMineAction: >-
+    (ctx, key, value, data) => {
+      if (data.location != 'goldMine') {
+        console.log("Miner " + key + ": Walkin' to the goldmine");
+        data.location = 'goldMine';
+        ctx.sendMessage(ctx.topic, key, { type: 'stayInMine' }, 1000);
+      }
+    }
+  stayInMineAction: >-
+    (ctx, key, value, data) => {
+      data.goldCarried++;
+      data.fatigue++;
+      console.log("Miner " + key + ": Pickin' up a nugget");
+      if (data.goldCarried >= 3) {
+        ctx.sendMessage(ctx.topic, key, { type: 'visitBank' }, 0);
+      } else if (data.thirst >= 5) {
+        ctx.sendMessage(ctx.topic, key, { type: 'quenchThirst' }, 0);
+      }
+    }
+  exitMineAction: >-
+    (ctx, key, value, data) => {
+      console.log("Miner " + key + ": Ah'm leavin' the goldmine with mah pockets full o' sweet gold");
+    }
+  enterBankAction: >-
+    (ctx, key, value, data) => {
+      console.log("Miner " + key + ": Goin' to the bank. Yes siree");
+      data.location = 'bank';
+      data.moneyInBank += data.goldCarried;
+      data.goldCarried = 0;
+      console.log("Miner " + key + ": Depositing gold. Total savings now: " + data.moneyInBank);
+      if (data.moneyInBank >= 5) {
+        console.log("Miner " + key + ": WooHoo! Rich enough for now. Back home to mah li'lle lady");
+        ctx.sendMessage(ctx.topic, key, { type: 'goHome' }, 0);
+      } else {
+        ctx.sendMessage(ctx.topic, key, { type: 'enterMine' }, 0);
+    }
+  exitBankAction: >-
+    (ctx, key, value, data) => {
+      console.log("Miner " + key + ": Leavin' the bank");
+    }
+  enterHomeAction: >-
+    (ctx, key, value, data) => {
+      if (data.location != 'shack') {
+        console.log("Miner " + key + ": Walkin' home");
+        data.location = 'shack';
+        ctx.sendMessage(ctx.topic, key, { type: 'stayHome' }, 1000);
+      }
+    }
+  stayHomeAction: >-
+    (ctx, key, value, data) => {
+      if (data.fatigue < 5) {
+        console.log("Miner " + key + ": What a God darn fantastic nap! Time to find more gold");
+        data.location = 'shack';
+        ctx.sendMessage(ctx.topic, key, { type: 'enterMine' }, 0);
+      } else {
+        data.fatigue--;
+        console.log("Miner " + key + ": ZZZZ... ");
+        ctx.sendMessage(ctx.topic, key, { type: 'stayHome' }, 1000);
+      }
+    }
+  exitHomeAction: >-
+    (ctx, key, value, data) => {
+      console.log("Miner " + key + ": Leavin' the house");
+    }
+  enterSaloonAction: >-
+    (ctx, key, value, data) => {
+      if (data.moneyInBank >= 2) {
+        data.thirst = 0;
+        data.moneyInBank -= 2;
+        console.log("Miner " + key + ": That's mighty fine sippin liquer");
+      }
+      ctx.sendMessage(ctx.topic, key, { type: 'enterMine' }, 0);
+    }
+  exitSaloonAction: >-
+    (ctx, key, value, data) => {
+      console.log("Miner " + key + ": Leavin' the saloon, feelin' good");
+    }
+

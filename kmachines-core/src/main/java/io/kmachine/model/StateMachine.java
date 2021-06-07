@@ -22,32 +22,11 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.JsonNode;
-import io.kmachine.KMachineState;
-import io.kmachine.utils.JsonSerde;
-import org.apache.kafka.common.serialization.Serde;
-import org.apache.kafka.streams.KafkaStreams;
-import org.apache.kafka.streams.KeyValue;
-import org.apache.kafka.streams.StreamsBuilder;
-import org.apache.kafka.streams.Topology;
-import org.apache.kafka.streams.kstream.Consumed;
-import org.apache.kafka.streams.kstream.KStream;
-import org.apache.kafka.streams.kstream.Transformer;
-import org.apache.kafka.streams.processor.ProcessorContext;
-import org.apache.kafka.streams.state.KeyValueStore;
-import org.apache.kafka.streams.state.StoreBuilder;
-import org.apache.kafka.streams.state.Stores;
-import org.graalvm.polyglot.Context;
-import org.graalvm.polyglot.Engine;
-import org.graalvm.polyglot.Source;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Properties;
 
 @JsonInclude(Include.NON_NULL)
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -58,27 +37,27 @@ public class StateMachine {
     private List<State> states;
     private List<Transition> transitions;
     private Map<String, Object> data;
-    private Map<String, String> methods;
+    private Map<String, String> functions;
 
     public StateMachine(@JsonProperty("name") String name,
                         @JsonProperty("init") String init,
                         @JsonProperty("states") List<State> states,
                         @JsonProperty("transitions") List<Transition> transitions,
                         @JsonProperty("data") Map<String, Object> data,
-                        @JsonProperty("methods") Map<String, String> methods) {
+                        @JsonProperty("functions") Map<String, String> functions) {
         this.name = name;
         this.init = init;
         this.states = states != null ? states : Collections.emptyList();
         this.transitions = transitions != null ? transitions : Collections.emptyList();
         this.data = data != null ? data : Collections.emptyMap();
-        this.methods = methods != null ? methods : Collections.emptyMap();
+        this.functions = functions != null ? functions : Collections.emptyMap();
     }
 
     public StateMachine() {
         this.states = Collections.emptyList();
         this.transitions = Collections.emptyList();
         this.data = Collections.emptyMap();
-        this.methods = Collections.emptyMap();
+        this.functions = Collections.emptyMap();
     }
 
     @JsonProperty("name")
@@ -131,14 +110,14 @@ public class StateMachine {
         this.data = data;
     }
 
-    @JsonProperty("methods")
-    public Map<String, String> getMethods() {
-        return methods;
+    @JsonProperty("functions")
+    public Map<String, String> getFunctions() {
+        return functions;
     }
 
-    @JsonProperty("methods")
-    public void setMethods(Map<String, String> methods) {
-        this.methods = methods;
+    @JsonProperty("functions")
+    public void setFunctions(Map<String, String> functions) {
+        this.functions = functions;
     }
 
     @Override
@@ -151,11 +130,11 @@ public class StateMachine {
             && Objects.equals(states, that.states)
             && Objects.equals(transitions, that.transitions)
             && Objects.equals(data, that.data)
-            && Objects.equals(methods, that.methods);
+            && Objects.equals(functions, that.functions);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(name, init, states, transitions, data, methods);
+        return Objects.hash(name, init, states, transitions, data, functions);
     }
 }

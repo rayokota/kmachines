@@ -23,7 +23,6 @@ import org.apache.kafka.streams.KafkaStreams;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 
 public class KMachineState {
 

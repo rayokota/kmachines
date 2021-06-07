@@ -28,9 +28,15 @@ import com.github.oxo42.stateless4j.delegates.FuncBoolean;
 import io.kmachine.model.State;
 import io.kmachine.model.StateMachine;
 import io.kmachine.model.Transition;
+import io.kmachine.utils.ClientUtils;
 import io.kmachine.utils.JsonSerde;
 import io.kmachine.utils.KryoSerde;
+import io.kmachine.utils.ListProxyArray;
+import io.kmachine.utils.MapProxyObject;
+import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.common.serialization.Serde;
+import org.apache.kafka.connect.json.JsonSerializer;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.StreamsBuilder;
@@ -42,19 +48,22 @@ import org.apache.kafka.streams.processor.ProcessorContext;
 import org.apache.kafka.streams.state.KeyValueStore;
 import org.apache.kafka.streams.state.StoreBuilder;
 import org.apache.kafka.streams.state.Stores;
-import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.Engine;
 import org.graalvm.polyglot.Source;
-import org.graalvm.polyglot.proxy.ProxyArray;
+import org.graalvm.polyglot.Value;
 import org.graalvm.polyglot.proxy.ProxyObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 
 public class KMachine implements AutoCloseable {
 
@@ -77,6 +86,7 @@ public class KMachine implements AutoCloseable {
     private final String inputTopic;
     private final String storeName;
     private final StateMachine stateMachine;
+    private final Engine engine;
 
     private KStream<JsonNode, JsonNode> input;
     private KafkaStreams streams;
@@ -91,8 +101,78 @@ public class KMachine implements AutoCloseable {
         this.bootstrapServers = bootstrapServers;
         this.inputTopic = inputTopic;
         this.stateMachine = stateMachine;
-
+        this.engine = Engine.create();
         this.storeName = "kmachine-" + applicationId;
+
+        validate();
+    }
+
+    private void validate() throws IllegalArgumentException {
+        Set<String> stateNames = new HashSet<>();
+        for (State state : stateMachine.getStates()) {
+            String stateName = state.getName();
+            String onEntry = state.getOnEntry();
+            String onExit = state.getOnExit();
+            if (stateName == null) {
+                throw new IllegalArgumentException(
+                    String.format("Invalid name '%s' for state", stateName));
+            }
+            if (onEntry != null && !stateMachine.getFunctions().containsKey(onEntry)) {
+                throw new IllegalArgumentException(
+                    String.format("Invalid onEntry '%s' for state '%s'", onEntry, stateName));
+            }
+            if (onExit != null && !stateMachine.getFunctions().containsKey(onExit)) {
+                throw new IllegalArgumentException(
+                    String.format("Invalid onExit '%s' for state '%s'", onExit, stateName));
+            }
+            stateNames.add(stateName);
+        }
+        for (Transition transition : stateMachine.getTransitions()) {
+            String type = transition.getType();  // type can be null
+            String to = transition.getTo();
+            String from = transition.getFrom();
+            String guard = transition.getGuard();
+            String onTransition = transition.getOnTransition();
+            // to can be null for internal transitions
+            if (to != null && !stateNames.contains(to)) {
+                throw new IllegalArgumentException(
+                    String.format("Invalid to '%s' for transition '%s'", to, type));
+            }
+            if (from == null || !stateNames.contains(from)) {
+                throw new IllegalArgumentException(
+                    String.format("Invalid from '%s' for transition '%s'", from, type));
+            }
+            if (guard != null && !stateMachine.getFunctions().containsKey(guard)) {
+                throw new IllegalArgumentException(
+                    String.format("Invalid guard '%s' for transition '%s'", guard, type));
+            }
+            if (onTransition != null && !stateMachine.getFunctions().containsKey(onTransition)) {
+                throw new IllegalArgumentException(
+                    String.format("Invalid onTransition '%s' for transition '%s'", onTransition, type));
+            }
+        }
+        String name = stateMachine.getName();
+        String init = stateMachine.getInit();
+        if (name == null) {
+            throw new IllegalArgumentException(
+                String.format("Invalid name '%s' for state machine", name));
+        }
+        if (!stateNames.contains(init)) {
+            throw new IllegalArgumentException(
+                String.format("Invalid init '%s' for state machine '%s'", init, name));
+        }
+        try (org.graalvm.polyglot.Context context =
+                 org.graalvm.polyglot.Context.newBuilder().engine(engine).build()) {
+            for (Map.Entry<String, String> entry : stateMachine.getFunctions().entrySet()) {
+                String script = entry.getValue();
+                Source source = Source.create("js", script);
+                try {
+                    context.eval(source);
+                } catch (Exception e) {
+                    throw new IllegalArgumentException("Could not evaluate script: " + script, e);
+                }
+            }
+        }
     }
 
     public KMachineState configure(StreamsBuilder builder, Properties streamsConfig) {
@@ -130,14 +210,18 @@ public class KMachine implements AutoCloseable {
 
         private ProcessorContext context;
         private KeyValueStore<JsonNode, Map<String, Object>> store;
-        private Engine engine;
-        private StateMachineConfig<String, String> config;
+        private Producer<JsonNode, JsonNode> producer;
+        private ScheduledExecutorService executor;
 
         @Override
         public void init(final ProcessorContext context) {
             this.context = context;
             this.store = context.getStateStore(storeName);
-            this.engine = Engine.create();
+            Properties producerConfig = ClientUtils.producerConfig(
+                bootstrapServers, JsonSerializer.class, JsonSerializer.class, new Properties()
+            );
+            this.producer = new KafkaProducer<>(producerConfig);
+            this.executor = Executors.newScheduledThreadPool(10);
         }
 
         @Override
@@ -151,7 +235,7 @@ public class KMachine implements AutoCloseable {
             String init = (String) data.getOrDefault(STATE_KEY, stateMachine.getInit());
             Object proxyKey = toProxy(readOnlyKey);
             Object proxyValue = toProxy(value);
-            ProxyObject proxyData = ProxyObject.fromMap(data);
+            ProxyObject proxyData = new MapProxyObject(data);
             com.github.oxo42.stateless4j.StateMachine<String, String> impl =
                 toImpl(init, toConfig(proxyKey, proxyValue, proxyData));
             String type = null;
@@ -201,33 +285,50 @@ public class KMachine implements AutoCloseable {
                     Action action = transition.getOnTransition() != null
                         ? toAction(transition.getOnTransition(), key, value, data)
                         : NO_ACTION;
-                    stateConfig.permitIf(type, transition.getTo(), guard, action);
+                    String to = transition.getTo();
+                    if (to != null) {
+                        stateConfig.permitIf(type, transition.getTo(), guard, action);
+                    } else {
+                        stateConfig.permitInternalIf(type, guard, action);
+                    }
                 }
             }
             return config;
         }
 
         private FuncBoolean toGuard(String guard, Object key, Object value, ProxyObject data) {
+            String script = stateMachine.getFunctions().get(guard);
+            if (script == null) {
+                throw new IllegalStateException("No function named " + guard);
+            }
             return () -> {
-                // TODO add ctx
-                Source source = Source.create("js", "var _fn = " + guard + "; _fn(key, value, data);");
-                try (Context context = Context.newBuilder().engine(engine).build()) {
-                    context.getBindings("js").putMember("key", key);
-                    context.getBindings("js").putMember("value", value);
-                    context.getBindings("js").putMember("data", data);
+                Source source = Source.create("js", "var _fn = " + script + "; _fn(ctx, key, value, data);");
+                try (org.graalvm.polyglot.Context context =
+                         org.graalvm.polyglot.Context.newBuilder().engine(engine).build()) {
+                    Value jsBindings = context.getBindings("js");
+                    jsBindings.putMember("ctx", new Context(this.context, executor, producer));
+                    jsBindings.putMember("key", key);
+                    jsBindings.putMember("value", value);
+                    jsBindings.putMember("data", data);
                     return context.eval(source).asBoolean();
                 }
             };
         }
 
         private Action toAction(String action, Object key, Object value, ProxyObject data) {
+            String script = stateMachine.getFunctions().get(action);
+            if (script == null) {
+                throw new IllegalStateException("No function named " + action);
+            }
             return () -> {
-                // TODO add ctx
-                Source source = Source.create("js", "var _fn = " + action + "; _fn(key, value, data);");
-                try (Context context = Context.newBuilder().engine(engine).build()) {
-                    context.getBindings("js").putMember("key", key);
-                    context.getBindings("js").putMember("value", value);
-                    context.getBindings("js").putMember("data", data);
+                Source source = Source.create("js", "var _fn = " + script + "; _fn(ctx, key, value, data);");
+                try (org.graalvm.polyglot.Context context =
+                         org.graalvm.polyglot.Context.newBuilder().engine(engine).build()) {
+                    Value jsBindings = context.getBindings("js");
+                    jsBindings.putMember("ctx", new Context(this.context, executor, producer));
+                    jsBindings.putMember("key", key);
+                    jsBindings.putMember("value", value);
+                    jsBindings.putMember("data", data);
                     context.eval(source);
                 }
             };
@@ -248,11 +349,11 @@ public class KMachine implements AutoCloseable {
             } else if (jsonNode.isTextual()) {
                 return jsonNode.textValue();
             } else if (jsonNode.isObject()) {
-                Map<String, Object> values = MAPPER.convertValue(jsonNode, new TypeReference<Map<String, Object>>() {});
-                return ProxyObject.fromMap(values);
+                Map<String, Object> values = MAPPER.convertValue(jsonNode, new TypeReference<>() {});
+                return new MapProxyObject(values);
             } else if (jsonNode.isArray()) {
-                List<Object> values = MAPPER.convertValue(jsonNode, new TypeReference<List<Object>>() {});
-                return ProxyArray.fromArray(values);
+                List<Object> values = MAPPER.convertValue(jsonNode, new TypeReference<>() {});
+                return new ListProxyArray(values);
             } else {
                 throw new IllegalArgumentException("Cannot convert node " + jsonNode.asText());
             }

@@ -3,13 +3,13 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <artifactId>kmachine-parent</artifactId>
+        <artifactId>kmachines-parent</artifactId>
         <groupId>io.kmachine</groupId>
         <version>0.0.1-SNAPSHOT</version>
     </parent>
 
     <groupId>io.kmachine</groupId>
-    <artifactId>kmachine-rest-app</artifactId>
+    <artifactId>kmachines-rest-app</artifactId>
     <packaging>jar</packaging>
 
     <properties>
@@ -44,7 +44,7 @@
     <dependencies>
         <dependency>
             <groupId>io.kmachine</groupId>
-            <artifactId>kmachine-core</artifactId>
+            <artifactId>kmachines-core</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
@@ -240,7 +240,7 @@
                     </execution>
                 </executions>
                 <configuration>
-                    <repository>docker.io/rayokota/kmachine-rest-app</repository>
+                    <repository>docker.io/rayokota/kmachines-rest-app</repository>
                     <useMavenSettingsForAuth>true</useMavenSettingsForAuth>
                     <buildArgs>
                         <KMACHINE_VERSION>${project.version}</KMACHINE_VERSION>

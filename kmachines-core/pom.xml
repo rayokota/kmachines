@@ -3,13 +3,13 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <artifactId>kmachine-parent</artifactId>
+        <artifactId>kmachines-parent</artifactId>
         <groupId>io.kmachine</groupId>
         <version>0.0.1-SNAPSHOT</version>
     </parent>
 
     <groupId>io.kmachine</groupId>
-    <artifactId>kmachine-core</artifactId>
+    <artifactId>kmachines-core</artifactId>
     <packaging>jar</packaging>
 
     <dependencies>
