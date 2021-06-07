@@ -68,10 +68,10 @@ public class StateMachine {
                         @JsonProperty("methods") Map<String, String> methods) {
         this.name = name;
         this.init = init;
-        this.states = states;
-        this.transitions = transitions;
-        this.data = data;
-        this.methods = methods;
+        this.states = states != null ? states : Collections.emptyList();
+        this.transitions = transitions != null ? transitions : Collections.emptyList();
+        this.data = data != null ? data : Collections.emptyMap();
+        this.methods = methods != null ? methods : Collections.emptyMap();
     }
 
     public StateMachine() {

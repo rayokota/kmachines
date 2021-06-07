@@ -41,6 +41,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+// TODO upgrade Kryo
 public class KryoUtils {
     private static final Logger log = LoggerFactory.getLogger(KryoUtils.class);
 

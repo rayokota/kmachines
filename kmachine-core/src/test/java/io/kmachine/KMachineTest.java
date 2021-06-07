@@ -19,9 +19,13 @@
 package io.kmachine;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.IntNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.TextNode;
+import io.kmachine.model.State;
 import io.kmachine.model.StateMachine;
+import io.kmachine.model.Transition;
 import io.kmachine.utils.ClientUtils;
 import io.kmachine.utils.JsonSerde;
 import io.kmachine.utils.StreamUtils;
@@ -36,15 +40,19 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
+import static io.kmachine.KMachine.STATE_KEY;
 import static org.junit.Assert.assertEquals;
 
 public class KMachineTest extends AbstractIntegrationTest {
     private static final Logger log = LoggerFactory.getLogger(KMachineTest.class);
+
+    private static final ObjectMapper MAPPER = new ObjectMapper();
 
     KMachine machine;
 
@@ -56,11 +64,16 @@ public class KMachineTest extends AbstractIntegrationTest {
         Properties producerConfig = ClientUtils.producerConfig(CLUSTER.bootstrapServers(), LongSerializer.class,
             LongSerializer.class, new Properties()
         );
+        ObjectNode node1 = MAPPER.createObjectNode();
+        node1.put("type", "toggle");
+        ObjectNode node2 = MAPPER.createObjectNode();
+        node2.put("type", "toggle");
         KStream<JsonNode, JsonNode> stream =
             StreamUtils.streamFromCollection(builder, producerConfig, "input", 3, (short) 1, new JsonSerde(), new JsonSerde(),
                 List.of(
-                    new KeyValue<>(new TextNode("hi"), new IntNode(123)),
-                    new KeyValue<>(new TextNode("world"), new IntNode(456))
+                    new KeyValue<>(new IntNode(123), node1),
+                    new KeyValue<>(new IntNode(123), node1),
+                    new KeyValue<>(new IntNode(456), node2)
                 )
             );
 
@@ -70,21 +83,31 @@ public class KMachineTest extends AbstractIntegrationTest {
         KafkaStreams streams = new KafkaStreams(topology, props);
         streams.start();
 
+        List<State> states = List.of(new State("on", null, null), new State("off", null, null));
+        List<Transition> transitions = List.of(
+            new Transition("toggle", "on", "off", null, null),
+            new Transition("toggle", "off", "on", null, null)
+        );
+        StateMachine stateMachine = new StateMachine("mymachine", "off", states, transitions, null, null);
+
         Map<String, Object> configs = new HashMap<>();
-        machine = new KMachine(null, suffix, CLUSTER.bootstrapServers(), "input", new StateMachine());
+        machine = new KMachine(null, suffix, CLUSTER.bootstrapServers(), "input", stateMachine);
         streamsConfiguration = ClientUtils.streamsConfig("run-" + suffix, "run-client-" + suffix,
             CLUSTER.bootstrapServers(), JsonSerde.class, JsonSerde.class);
         streams = machine.configure(new StreamsBuilder(), streamsConfiguration).streams();
 
         Thread.sleep(5000);
 
-        Map<JsonNode, JsonNode> map = StreamUtils.mapFromStore(streams, "kmachine-" + suffix);
+        Map<JsonNode, Map<String, Object>> map = StreamUtils.mapFromStore(streams, "kmachine-" + suffix);
         log.debug("result: {}", map);
 
-        Map<JsonNode, JsonNode> expectedResult = new HashMap<>();
-        expectedResult.put(new TextNode("hi"), new IntNode(123));
-        expectedResult.put(new TextNode("world"), new IntNode(456));
-
+        Map<JsonNode, Map<String, Object>> expectedResult = new HashMap<>();
+        Map<String, Object> data1 = new HashMap<>();
+        data1.put(STATE_KEY, "off");
+        Map<String, Object> data2 = new HashMap<>();
+        data2.put(STATE_KEY, "on");
+        expectedResult.put(new IntNode(123), data1);
+        expectedResult.put(new IntNode(456), data2);
         assertEquals(expectedResult, map);
     }
 

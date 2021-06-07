@@ -1,4 +1,4 @@
-# KMachine - Distributed Fine-Grained Finite State Machines with Kafka
+# KMachines - Distributed Fine-Grained Finite State Machines with Kafka
 
 [![Build Status][github-actions-shield]][github-actions-link]
 [![Maven][maven-shield]][maven-link]
@@ -11,11 +11,11 @@
 [javadoc-shield]: https://javadoc.io/badge/io.kmachine/kmachine-core.svg?color=blue
 [javadoc-link]: https://javadoc.io/doc/io.kmachine/kmachine-core
 
-KMachine is a client layer for distributed processing of fine-grained finite state machines with Apache Kafka. 
+KMachines is a client layer for distributed processing of fine-grained finite state machines with Apache Kafka. 
 
 ## Installing
 
-Releases of KMachine are deployed to Maven Central.
+Releases of KMachines are deployed to Maven Central.
 
 ```xml
 <dependency>
