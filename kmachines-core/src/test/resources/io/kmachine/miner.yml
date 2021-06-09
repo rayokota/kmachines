@@ -1,4 +1,4 @@
-name: WestWorld
+name: miner
 init: goHomeAndSleepTilRested
 states:
   - name: enterMineAndDigForNugget
@@ -66,8 +66,8 @@ functions:
       if (data.location != 'goldMine') {
         console.log("Miner " + key + ": Walkin' to the goldmine");
         data.location = 'goldMine';
-        ctx.sendMessage(ctx.topic(), key, { type: 'stayInMine' }, 1000);
       }
+      ctx.sendMessage(ctx.topic(), key, { type: 'stayInMine' }, 0);
     }
   stayInMineAction: >-
     (ctx, key, value, data) => {
@@ -109,8 +109,8 @@ functions:
       if (data.location != 'shack') {
         console.log("Miner " + key + ": Walkin' home");
         data.location = 'shack';
-        ctx.sendMessage(ctx.topic(), key, { type: 'stayHome' }, 1000);
       }
+      ctx.sendMessage(ctx.topic(), key, { type: 'stayHome' }, 0);
     }
   stayHomeAction: >-
     (ctx, key, value, data) => {

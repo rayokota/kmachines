@@ -53,8 +53,6 @@ public class WestWorldTest extends AbstractIntegrationTest {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
-    KMachine machine;
-
     @Test
     public void testWestWorld() throws Exception {
         String suffix = "";
@@ -66,7 +64,7 @@ public class WestWorldTest extends AbstractIntegrationTest {
         ObjectNode node1 = MAPPER.createObjectNode();
         node1.put("type", "stayHome");
         KStream<JsonNode, JsonNode> stream =
-            StreamUtils.streamFromCollection(builder, producerConfig, "input", 3, (short) 1, new JsonSerde(), new JsonSerde(),
+            StreamUtils.streamFromCollection(builder, producerConfig, "miner", 3, (short) 1, new JsonSerde(), new JsonSerde(),
                 List.of(
                     new KeyValue<>(new TextNode("Bob"), node1)
                 )
@@ -78,11 +76,11 @@ public class WestWorldTest extends AbstractIntegrationTest {
         KafkaStreams streams = new KafkaStreams(topology, props);
         streams.start();
 
-        Path path = Paths.get(getClass().getResource("westworld.yml").toURI());
+        Path path = Paths.get(getClass().getResource("miner.yml").toURI());
         String text = Files.readString(path, StandardCharsets.UTF_8);
         StateMachine stateMachine = new ObjectMapper(new YAMLFactory()).readValue(text, StateMachine.class);
 
-        machine = new KMachine(null, suffix, CLUSTER.bootstrapServers(), "input", stateMachine);
+        KMachine machine = new KMachine(null, suffix, CLUSTER.bootstrapServers(), "miner", stateMachine);
         streamsConfiguration = ClientUtils.streamsConfig("run-" + suffix, "run-client-" + suffix,
             CLUSTER.bootstrapServers(), JsonSerde.class, JsonSerde.class);
         streams = machine.configure(new StreamsBuilder(), streamsConfiguration).streams();
@@ -93,5 +91,74 @@ public class WestWorldTest extends AbstractIntegrationTest {
         log.debug("result: {}", map);
 
         assertEquals(Set.of(new TextNode("Bob")), map.keySet());
+    }
+
+    @Test
+    public void testWestWorldMessaging() throws Exception {
+        String suffix1 = "1";
+        String suffix2 = "2";
+        StreamsBuilder builder = new StreamsBuilder();
+
+        Properties producerConfig = ClientUtils.producerConfig(CLUSTER.bootstrapServers(), LongSerializer.class,
+            LongSerializer.class, new Properties()
+        );
+
+        ObjectNode node1 = MAPPER.createObjectNode();
+        node1.put("type", "stayHome");
+        node1.put("wife", "Elsa");
+        KStream<JsonNode, JsonNode> stream =
+            StreamUtils.streamFromCollection(builder, producerConfig, "miner", 3, (short) 1, new JsonSerde(), new JsonSerde(),
+                List.of(
+                    new KeyValue<>(new TextNode("Bob"), node1)
+                )
+            );
+
+        Topology topology = builder.build();
+        Properties props = ClientUtils.streamsConfig("prepare-" + suffix1, "prepare-client-" + suffix1,
+            CLUSTER.bootstrapServers(), JsonSerde.class, JsonSerde.class);
+        KafkaStreams streams = new KafkaStreams(topology, props);
+        streams.start();
+
+        builder = new StreamsBuilder();
+        ObjectNode node2 = MAPPER.createObjectNode();
+        node2.put("type", "continueHouseWork");
+        node2.put("husband", "Bob");
+        KStream<JsonNode, JsonNode> stream2 =
+            StreamUtils.streamFromCollection(builder, producerConfig, "miners_wife", 3, (short) 1, new JsonSerde(), new JsonSerde(),
+                List.of(
+                    new KeyValue<>(new TextNode("Elsa"), node2)
+                )
+            );
+
+        topology = builder.build();
+        props = ClientUtils.streamsConfig("prepare-" + suffix2, "prepare-client-" + suffix2,
+            CLUSTER.bootstrapServers(), JsonSerde.class, JsonSerde.class);
+        streams = new KafkaStreams(topology, props);
+        streams.start();
+
+        Path path = Paths.get(getClass().getResource("miner_messaging.yml").toURI());
+        String text = Files.readString(path, StandardCharsets.UTF_8);
+        StateMachine stateMachine1 = new ObjectMapper(new YAMLFactory()).readValue(text, StateMachine.class);
+
+        KMachine machine1 = new KMachine(null, suffix1, CLUSTER.bootstrapServers(), "miner", stateMachine1);
+        streamsConfiguration = ClientUtils.streamsConfig("run-" + suffix1, "run-client-" + suffix1,
+            CLUSTER.bootstrapServers(), JsonSerde.class, JsonSerde.class);
+        machine1.configure(new StreamsBuilder(), streamsConfiguration).streams();
+
+        path = Paths.get(getClass().getResource("miners_wife_messaging.yml").toURI());
+        text = Files.readString(path, StandardCharsets.UTF_8);
+        StateMachine stateMachine2 = new ObjectMapper(new YAMLFactory()).readValue(text, StateMachine.class);
+
+        KMachine machine2 = new KMachine(null, suffix2, CLUSTER.bootstrapServers(), "miners_wife", stateMachine2);
+        streamsConfiguration = ClientUtils.streamsConfig("run-" + suffix2, "run-client-" + suffix2,
+            CLUSTER.bootstrapServers(), JsonSerde.class, JsonSerde.class);
+        streams = machine2.configure(new StreamsBuilder(), streamsConfiguration).streams();
+
+        Thread.sleep(30000);
+
+        Map<JsonNode, Map<String, Object>> map = StreamUtils.mapFromStore(streams, "kmachine-" + suffix2);
+        log.debug("result: {}", map);
+
+        assertEquals(Set.of(new TextNode("Elsa")), map.keySet());
     }
 }

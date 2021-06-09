@@ -202,6 +202,7 @@ public class KMachine implements AutoCloseable {
         if (streams != null) {
             streams.close();
         }
+        engine.close();
     }
 
     private final class ProcessInput implements Processor<JsonNode, JsonNode> {
@@ -333,7 +334,16 @@ public class KMachine implements AutoCloseable {
 
         private com.github.oxo42.stateless4j.StateMachine<String, String> toImpl(
             String init, StateMachineConfig<String, String> config) {
-            return new com.github.oxo42.stateless4j.StateMachine<>(init, config);
+            com.github.oxo42.stateless4j.StateMachine<String, String> sm =
+                new com.github.oxo42.stateless4j.StateMachine<>(init, config);
+            sm.onUnhandledTrigger((state, trigger, args) -> {
+                log.debug(
+                    String.format(
+                        "No valid leaving transitions are permitted from state '%s' for trigger '%s'. Consider ignoring the trigger.",
+                        state, trigger)
+                );
+            });
+            return sm;
         }
 
         private Object toProxy(JsonNode jsonNode) {
@@ -358,7 +368,6 @@ public class KMachine implements AutoCloseable {
 
         @Override
         public void close() {
-            engine.close();
         }
     }
 }

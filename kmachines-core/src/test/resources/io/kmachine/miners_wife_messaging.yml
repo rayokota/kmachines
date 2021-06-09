@@ -1,0 +1,122 @@
+name: minersWife
+init: doHouseWork
+states:
+  - name: doHouseWork
+    onEntry: startHouseWorkAction
+    onExit:
+  - name: visitBathroom
+    onEntry: enterBathroomAction
+    onExit: exitBathroomAction
+  - name: cookStew
+    onEntry: startCookingAction
+    onExit: finishCookingAction
+transitions:
+  - type: continueHouseWork
+    from: doHouseWork
+    to:
+    guard:
+    onTransition: continueHouseWorkAction
+  - type: natureCalls
+    from: doHouseWork
+    to: visitBathroom
+    guard:
+    onTransition:
+  - type: natureCalls
+    from: cookStew
+    to: visitBathroom
+    guard:
+    onTransition:
+  - type: hiHoneyImHome
+    from: doHouseWork
+    to: cookStew
+    guard:
+    onTransition: hiHoneyAction
+  - type: hiHoneyImHome
+    from: visitBathroom
+    to: cookStew
+    guard:
+    onTransition: hiHoneyAction
+  - type: continueHouseWork
+    from: visitBathroom
+    to: doHouseWork
+    guard:
+    onTransition:
+  - type: continueCooking
+    from: cookStew
+    to:
+    guard:
+    onTransition: continueCookingAction
+  - type: stewReady
+    from: cookStew
+    to: doHouseWork
+    guard:
+    onTransition: letsEatAction
+data:
+  location: shack
+  cooking: false
+functions:
+  startHouseWorkAction: >-
+    (ctx, key, value, data) => {
+      console.log(key + ": Time to do some more housework!");
+      ctx.sendMessage(ctx.topic(), key, { type: 'continueHouseWork' }, 0);
+    }
+  continueHouseWorkAction: >-
+    (ctx, key, value, data) => {
+      if (value.husband) {
+        data.husband = value.husband;
+      }
+      switch (Math.floor(Math.random() * 3)) {
+        case 0:
+          console.log(key + ": Moppin' the floor");
+          break;
+        case 1:
+          console.log(key + ": Washin' the dishes");
+          break;
+        case 2:
+          console.log(key + ": Makin' the bed");
+          break;
+      }
+      if (Math.random() < 0.1) {
+        ctx.sendMessage(ctx.topic(), key, { type: 'natureCalls' }, 0);
+      } else {
+        ctx.sendMessage(ctx.topic(), key, { type: 'continueHouseWork' }, 1000);
+      }
+    }
+  enterBathroomAction: >-
+    (ctx, key, value, data) => {
+      console.log(key + ": Walkin' to the can. Need to powda mah pretty li'lle nose");
+      console.log(key + ": Ahhhhhh! Sweet relief!");
+      ctx.sendMessage(ctx.topic(), key, { type: 'continueHouseWork' }, 0);
+    }
+  exitBathroomAction: >-
+    (ctx, key, value, data) => {
+      console.log(key + ": Leavin' the Jon");
+    }
+  hiHoneyAction: >-
+    (ctx, key, value, data) => {
+      console.log(key + ": Hi honey. Let me make you some of mah fine country stew");
+    }
+  startCookingAction: >-
+    (ctx, key, value, data) => {
+      if (!data.cooking) {
+        console.log(key + ": Putting the stew in the oven");
+        ctx.sendMessage(ctx.topic(), key, { type: 'stewReady' }, 2000);
+        data.cooking = true;
+      }
+      ctx.sendMessage(ctx.topic(), key, { type: 'continueCooking' }, 0);
+    }
+  continueCookingAction: >-
+    (ctx, key, value, data) => {
+      console.log(key + ": Fussin' over food");
+      ctx.sendMessage(ctx.topic(), key, { type: 'continueCooking' }, 1000);
+    }
+  finishCookingAction: >-
+    (ctx, key, value, data) => {
+      console.log(key + ": Puttin' the stew on the table");
+    }
+  letsEatAction: >-
+    (ctx, key, value, data) => {
+      console.log(key + ": StewReady! Lets eat");
+      ctx.sendMessage('miner', data.husband, { type: 'stewReady' }, 0);
+      data.cooking = false;
+    }
