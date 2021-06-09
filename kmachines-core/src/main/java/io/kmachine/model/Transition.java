@@ -29,21 +29,29 @@ import java.util.Objects;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class Transition {
 
+    public enum ToType {
+        State,
+        Function
+    }
+
     private String type;
     private String from;
     // If to is null, it is an internal transition
     private String to;
+    private ToType toType;
     private String guard;
     private String onTransition;
 
     public Transition(@JsonProperty("type") String type,
                       @JsonProperty("from") String from,
                       @JsonProperty("to") String to,
+                      @JsonProperty("toType") ToType toType,
                       @JsonProperty("guard") String guard,
                       @JsonProperty("onTransition") String onTransition) {
         this.type = type;
         this.from = from;
         this.to = to;
+        this.toType = toType;
         this.guard = guard;
         this.onTransition = onTransition;
     }
@@ -81,6 +89,16 @@ public class Transition {
         this.to = to;
     }
 
+    @JsonProperty("toType")
+    public ToType getToType() {
+        return toType;
+    }
+
+    @JsonProperty("toType")
+    public void setToType(ToType toType) {
+        this.toType = toType;
+    }
+
     @JsonProperty("guard")
     public String getGuard() {
         return guard;
@@ -109,12 +127,13 @@ public class Transition {
         return Objects.equals(type, that.type)
             && Objects.equals(from, that.from)
             && Objects.equals(to, that.to)
+            && Objects.equals(toType, that.toType)
             && Objects.equals(guard, that.guard)
             && Objects.equals(onTransition, that.onTransition);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(type, from, to, guard, onTransition);
+        return Objects.hash(type, from, to, toType, guard, onTransition);
     }
 }

@@ -26,6 +26,12 @@ transitions:
     to: visitBathroom
     guard:
     onTransition:
+  - type: continuePrevious
+    from: visitBathroom
+    to: revertToPreviousState
+    toType: Function
+    guard:
+    onTransition:
   - type: hiHoneyImHome
     from: doHouseWork
     to: cookStew
@@ -36,11 +42,6 @@ transitions:
     to: cookStew
     guard:
     onTransition: hiHoneyAction
-  - type: continueHouseWork
-    from: visitBathroom
-    to: doHouseWork
-    guard:
-    onTransition:
   - type: continueCooking
     from: cookStew
     to:
@@ -86,11 +87,15 @@ functions:
     (ctx, key, value, data) => {
       console.log(key + ": Walkin' to the can. Need to powda mah pretty li'lle nose");
       console.log(key + ": Ahhhhhh! Sweet relief!");
-      ctx.sendMessage(ctx.topic(), key, { type: 'continueHouseWork' }, 0);
+      ctx.sendMessage(ctx.topic(), key, { type: 'continuePrevious' }, 0);
     }
   exitBathroomAction: >-
     (ctx, key, value, data) => {
       console.log(key + ": Leavin' the Jon");
+    }
+  revertToPreviousState: >-
+    (ctx, key, value, data) => {
+      return data.cooking ? 'cookStew' : 'doHouseWork'
     }
   hiHoneyAction: >-
     (ctx, key, value, data) => {
@@ -108,7 +113,11 @@ functions:
   continueCookingAction: >-
     (ctx, key, value, data) => {
       console.log(key + ": Fussin' over food");
-      ctx.sendMessage(ctx.topic(), key, { type: 'continueCooking' }, 1000);
+      if (Math.random() < 0.1) {
+        ctx.sendMessage(ctx.topic(), key, { type: 'natureCalls' }, 0);
+      } else {
+        ctx.sendMessage(ctx.topic(), key, { type: 'continueCooking' }, 1000);
+      }
     }
   finishCookingAction: >-
     (ctx, key, value, data) => {

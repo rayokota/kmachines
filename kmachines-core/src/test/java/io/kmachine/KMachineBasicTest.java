@@ -25,6 +25,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.kmachine.model.State;
 import io.kmachine.model.StateMachine;
 import io.kmachine.model.Transition;
+import io.kmachine.model.Transition.ToType;
 import io.kmachine.utils.ClientUtils;
 import io.kmachine.utils.JsonSerde;
 import io.kmachine.utils.StreamUtils;
@@ -86,8 +87,8 @@ public class KMachineBasicTest extends AbstractIntegrationTest {
             new State("off", "turnOff", null)
         );
         List<Transition> transitions = List.of(
-            new Transition("toggle", "on", "off", null, null),
-            new Transition("toggle", "off", "on", null, null)
+            new Transition("toggle", "on", "off", ToType.State, null, null),
+            new Transition("toggle", "off", "on", ToType.State, null, null)
         );
         Map<String, String> functions = Map.of(
             "turnOn", "(ctx, key, value, data) => { data.onEnter = 'turning on'; console.log('turning on') }",
@@ -137,8 +138,8 @@ public class KMachineBasicTest extends AbstractIntegrationTest {
             new State("off", "turnOff", null)
         );
         List<Transition> transitions = List.of(
-            new Transition("toggle", "on", "off", null, null),
-            new Transition("toggle", "off", "on", null, null)
+            new Transition("toggle", "on", "off", ToType.State, null, null),
+            new Transition("toggle", "off", "on", ToType.State, null, null)
         );
         StateMachine stateMachine = new StateMachine("mymachine", "off", states, transitions, null, null);
 

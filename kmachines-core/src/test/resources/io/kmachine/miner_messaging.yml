@@ -132,7 +132,7 @@ functions:
         data.wife = value.wife;
       }
       if (data.fatigue < 5) {
-        console.log("Miner " + key + ": What a God darn fantastic nap! Time to find more gold");
+        console.log("Miner " + key + ": All mah fatigue has drained away. Time to find more gold!");
         data.location = 'shack';
         ctx.sendMessage(ctx.topic(), key, { type: 'enterMine' }, 0);
       } else {
@@ -143,7 +143,6 @@ functions:
     }
   exitHomeAction: >-
     (ctx, key, value, data) => {
-      console.log("Miner " + key + ": Leavin' the house");
     }
   enterSaloonAction: >-
     (ctx, key, value, data) => {

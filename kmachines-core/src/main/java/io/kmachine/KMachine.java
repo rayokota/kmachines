@@ -24,10 +24,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.oxo42.stateless4j.StateConfiguration;
 import com.github.oxo42.stateless4j.StateMachineConfig;
 import com.github.oxo42.stateless4j.delegates.Action;
+import com.github.oxo42.stateless4j.delegates.Action3;
+import com.github.oxo42.stateless4j.delegates.Func;
 import com.github.oxo42.stateless4j.delegates.FuncBoolean;
 import io.kmachine.model.State;
 import io.kmachine.model.StateMachine;
 import io.kmachine.model.Transition;
+import io.kmachine.model.Transition.ToType;
 import io.kmachine.utils.ClientUtils;
 import io.kmachine.utils.JsonSerde;
 import io.kmachine.utils.KryoSerde;
@@ -38,12 +41,10 @@ import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.connect.json.JsonSerializer;
 import org.apache.kafka.streams.KafkaStreams;
-import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.kstream.Consumed;
 import org.apache.kafka.streams.kstream.KStream;
-import org.apache.kafka.streams.kstream.Transformer;
 import org.apache.kafka.streams.processor.Processor;
 import org.apache.kafka.streams.processor.ProcessorContext;
 import org.apache.kafka.streams.state.KeyValueStore;
@@ -77,6 +78,14 @@ public class KMachine implements AutoCloseable {
     private static final Action NO_ACTION = () -> {
     };
     private static final FuncBoolean NO_GUARD = () -> true;
+    private static final Action3<String, String, Object[]> UNHANDLED_TRIGGER = (state, trigger, args) -> {
+        log.debug(
+            String.format(
+                "No valid leaving transitions are permitted from state '%s' for trigger '%s'. Consider ignoring the trigger.",
+                state, trigger)
+        );
+    };
+
     private static final Serde<JsonNode> JSON_SERDE = new JsonSerde();
     private static final Serde<Map<String, Object>> KRYO_SERDE = new KryoSerde<>();
     private static final ObjectMapper MAPPER = new ObjectMapper();
@@ -131,13 +140,24 @@ public class KMachine implements AutoCloseable {
         for (Transition transition : stateMachine.getTransitions()) {
             String type = transition.getType();  // type can be null
             String to = transition.getTo();
+            ToType toType = transition.getToType() != null ? transition.getToType() : ToType.State;
             String from = transition.getFrom();
             String guard = transition.getGuard();
             String onTransition = transition.getOnTransition();
-            // to can be null for internal transitions
-            if (to != null && !stateNames.contains(to)) {
-                throw new IllegalArgumentException(
-                    String.format("Invalid to '%s' for transition '%s'", to, type));
+            switch (toType) {
+                case State:
+                    // to can be null for internal transitions
+                    if (to != null && !stateNames.contains(to)) {
+                        throw new IllegalArgumentException(
+                            String.format("Invalid to '%s' of type '%s' for transition '%s'", to, toType, type));
+                    }
+                    break;
+                case Function:
+                    if (to == null || !stateMachine.getFunctions().containsKey(to)) {
+                        throw new IllegalArgumentException(
+                            String.format("Invalid to '%s' of type '%s' for transition '%s'", to, toType, type));
+                    }
+                    break;
             }
             if (from == null || !stateNames.contains(from)) {
                 throw new IllegalArgumentException(
@@ -283,10 +303,19 @@ public class KMachine implements AutoCloseable {
                             ? toAction(transition.getOnTransition(), key, value, data)
                             : NO_ACTION;
                         String to = transition.getTo();
-                        if (to != null) {
-                            stateConfig.permitIf(type, transition.getTo(), guard, action);
-                        } else {
-                            stateConfig.permitInternalIf(type, guard, action);
+                        ToType toType = transition.getToType() != null ? transition.getToType() : ToType.State;
+                        switch (toType) {
+                            case State:
+                                if (to != null) {
+                                    stateConfig.permitIf(type, to, guard, action);
+                                } else {
+                                    stateConfig.permitInternalIf(type, guard, action);
+                                }
+                                break;
+                            case Function:
+                                Func<String> toSelector = toStringFunc(to, key, value, data);
+                                stateConfig.permitDynamicIf(type, toSelector, guard, action);
+                                break;
                         }
                     }
                 }
@@ -332,17 +361,30 @@ public class KMachine implements AutoCloseable {
             };
         }
 
+        private Func<String> toStringFunc(String function, Object key, Object value, ProxyObject data) {
+            String script = stateMachine.getFunctions().get(function);
+            if (script == null) {
+                throw new IllegalStateException("No function named " + function);
+            }
+            return () -> {
+                Source source = Source.create("js", "var _fn = " + script + "; _fn(ctx, key, value, data);");
+                try (org.graalvm.polyglot.Context context =
+                         org.graalvm.polyglot.Context.newBuilder().engine(engine).build()) {
+                    Value jsBindings = context.getBindings("js");
+                    jsBindings.putMember("ctx", new Context(this.context, executor, producer));
+                    jsBindings.putMember("key", key);
+                    jsBindings.putMember("value", value);
+                    jsBindings.putMember("data", data);
+                    return context.eval(source).asString();
+                }
+            };
+        }
+
         private com.github.oxo42.stateless4j.StateMachine<String, String> toImpl(
             String init, StateMachineConfig<String, String> config) {
             com.github.oxo42.stateless4j.StateMachine<String, String> sm =
                 new com.github.oxo42.stateless4j.StateMachine<>(init, config);
-            sm.onUnhandledTrigger((state, trigger, args) -> {
-                log.debug(
-                    String.format(
-                        "No valid leaving transitions are permitted from state '%s' for trigger '%s'. Consider ignoring the trigger.",
-                        state, trigger)
-                );
-            });
+            sm.onUnhandledTrigger(UNHANDLED_TRIGGER);
             return sm;
         }
 
