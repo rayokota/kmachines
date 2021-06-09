@@ -22,9 +22,9 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.IntNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import io.kmachine.model.State;
+import com.fasterxml.jackson.databind.node.TextNode;
+import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import io.kmachine.model.StateMachine;
-import io.kmachine.model.Transition;
 import io.kmachine.utils.ClientUtils;
 import io.kmachine.utils.JsonSerde;
 import io.kmachine.utils.StreamUtils;
@@ -34,15 +34,19 @@ import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.kstream.KStream;
-import org.junit.After;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 
 import static io.kmachine.KMachine.STATE_KEY;
 import static org.junit.Assert.assertEquals;
@@ -55,7 +59,7 @@ public class WestWorldTest extends AbstractIntegrationTest {
     KMachine machine;
 
     @Test
-    public void testSimpleKMachine() throws Exception {
+    public void testWestWorld() throws Exception {
         String suffix = "";
         StreamsBuilder builder = new StreamsBuilder();
 
@@ -63,15 +67,11 @@ public class WestWorldTest extends AbstractIntegrationTest {
             LongSerializer.class, new Properties()
         );
         ObjectNode node1 = MAPPER.createObjectNode();
-        node1.put("type", "toggle");
-        ObjectNode node2 = MAPPER.createObjectNode();
-        node2.put("type", "toggle");
+        node1.put("type", "stayHome");
         KStream<JsonNode, JsonNode> stream =
             StreamUtils.streamFromCollection(builder, producerConfig, "input", 3, (short) 1, new JsonSerde(), new JsonSerde(),
                 List.of(
-                    new KeyValue<>(new IntNode(123), node1),
-                    new KeyValue<>(new IntNode(123), node1),
-                    new KeyValue<>(new IntNode(456), node2)
+                    new KeyValue<>(new TextNode("Bob"), node1)
                 )
             );
 
@@ -81,74 +81,20 @@ public class WestWorldTest extends AbstractIntegrationTest {
         KafkaStreams streams = new KafkaStreams(topology, props);
         streams.start();
 
-        List<State> states = List.of(
-            new State("on", "turnOn", null),
-            new State("off", "turnOff", null)
-        );
-        List<Transition> transitions = List.of(
-            new Transition("toggle", "on", "off", null, null),
-            new Transition("toggle", "off", "on", null, null)
-        );
-        Map<String, String> functions = Map.of(
-            "turnOn", "(key, value, data) => data.onEnter = 'turning on'",
-            "turnOff", "(key, value, data) => data.onEnter = 'turning off'"
-        );
-        StateMachine stateMachine = new StateMachine("mymachine", "off", states, transitions, null, functions);
+        Path path = Paths.get(getClass().getResource("westworld.yml").toURI());
+        String text = Files.readString(path, StandardCharsets.UTF_8);
+        StateMachine stateMachine = new ObjectMapper(new YAMLFactory()).readValue(text, StateMachine.class);
 
         machine = new KMachine(null, suffix, CLUSTER.bootstrapServers(), "input", stateMachine);
         streamsConfiguration = ClientUtils.streamsConfig("run-" + suffix, "run-client-" + suffix,
             CLUSTER.bootstrapServers(), JsonSerde.class, JsonSerde.class);
         streams = machine.configure(new StreamsBuilder(), streamsConfiguration).streams();
 
-        Thread.sleep(5000);
+        Thread.sleep(30000);
 
         Map<JsonNode, Map<String, Object>> map = StreamUtils.mapFromStore(streams, "kmachine-" + suffix);
         log.debug("result: {}", map);
 
-        Map<JsonNode, Map<String, Object>> expectedResult = new HashMap<>();
-        Map<String, Object> data1 = new HashMap<>();
-        data1.put(STATE_KEY, "off");
-        data1.put("onEnter", "turning off");
-        Map<String, Object> data2 = new HashMap<>();
-        data2.put(STATE_KEY, "on");
-        data2.put("onEnter", "turning on");
-        expectedResult.put(new IntNode(123), data1);
-        expectedResult.put(new IntNode(456), data2);
-        assertEquals(expectedResult, map);
-    }
-
-    @Test(expected = IllegalArgumentException.class)
-    public void testInvalidFunctions() throws Exception {
-        String suffix = "invalid";
-        Map<String, String> functions = Map.of(
-            "fun1", "'missing quote",
-            "fun2", "functio foo() { console.log }"
-        );
-        StateMachine stateMachine = new StateMachine("mymachine", "off", null, null, null, functions);
-
-        machine = new KMachine(null, suffix, CLUSTER.bootstrapServers(), "input", stateMachine);
-    }
-
-    @Test(expected = IllegalArgumentException.class)
-    public void testMissingFunctions() throws Exception {
-        String suffix = "missing";
-        List<State> states = List.of(
-            new State("on", "turnOn", null),
-            new State("off", "turnOff", null)
-        );
-        List<Transition> transitions = List.of(
-            new Transition("toggle", "on", "off", null, null),
-            new Transition("toggle", "off", "on", null, null)
-        );
-        StateMachine stateMachine = new StateMachine("mymachine", "off", states, transitions, null, null);
-
-        machine = new KMachine(null, suffix, CLUSTER.bootstrapServers(), "input", stateMachine);
-    }
-
-    @After
-    public void tearDown() throws Exception {
-        if (machine != null) {
-            machine.close();
-        }
+        assertEquals(Set.of(new TextNode("Bob")), map.keySet());
     }
 }

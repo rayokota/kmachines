@@ -39,6 +39,16 @@ transitions:
     to: enterMineAndDigForNugget
     guard:
     onTransition:
+  - type: enterMine
+    from: goHomeAndSleepTilRested
+    to: enterMineAndDigForNugget
+    guard:
+    onTransition:
+  - type: enterMine
+    from: quenchThirst
+    to: enterMineAndDigForNugget
+    guard:
+    onTransition:
   - type: stayHome
     from: goHomeAndSleepTilRested
     to:
@@ -56,7 +66,7 @@ functions:
       if (data.location != 'goldMine') {
         console.log("Miner " + key + ": Walkin' to the goldmine");
         data.location = 'goldMine';
-        ctx.sendMessage(ctx.topic, key, { type: 'stayInMine' }, 1000);
+        ctx.sendMessage(ctx.topic(), key, { type: 'stayInMine' }, 1000);
       }
     }
   stayInMineAction: >-
@@ -65,9 +75,11 @@ functions:
       data.fatigue++;
       console.log("Miner " + key + ": Pickin' up a nugget");
       if (data.goldCarried >= 3) {
-        ctx.sendMessage(ctx.topic, key, { type: 'visitBank' }, 0);
+        ctx.sendMessage(ctx.topic(), key, { type: 'visitBank' }, 0);
       } else if (data.thirst >= 5) {
-        ctx.sendMessage(ctx.topic, key, { type: 'quenchThirst' }, 0);
+        ctx.sendMessage(ctx.topic(), key, { type: 'quenchThirst' }, 0);
+      } else {
+        ctx.sendMessage(ctx.topic(), key, { type: 'stayInMine' }, 1000);
       }
     }
   exitMineAction: >-
@@ -83,9 +95,10 @@ functions:
       console.log("Miner " + key + ": Depositing gold. Total savings now: " + data.moneyInBank);
       if (data.moneyInBank >= 5) {
         console.log("Miner " + key + ": WooHoo! Rich enough for now. Back home to mah li'lle lady");
-        ctx.sendMessage(ctx.topic, key, { type: 'goHome' }, 0);
+        ctx.sendMessage(ctx.topic(), key, { type: 'goHome' }, 0);
       } else {
-        ctx.sendMessage(ctx.topic, key, { type: 'enterMine' }, 0);
+        ctx.sendMessage(ctx.topic(), key, { type: 'enterMine' }, 0);
+      }
     }
   exitBankAction: >-
     (ctx, key, value, data) => {
@@ -96,7 +109,7 @@ functions:
       if (data.location != 'shack') {
         console.log("Miner " + key + ": Walkin' home");
         data.location = 'shack';
-        ctx.sendMessage(ctx.topic, key, { type: 'stayHome' }, 1000);
+        ctx.sendMessage(ctx.topic(), key, { type: 'stayHome' }, 1000);
       }
     }
   stayHomeAction: >-
@@ -104,11 +117,11 @@ functions:
       if (data.fatigue < 5) {
         console.log("Miner " + key + ": What a God darn fantastic nap! Time to find more gold");
         data.location = 'shack';
-        ctx.sendMessage(ctx.topic, key, { type: 'enterMine' }, 0);
+        ctx.sendMessage(ctx.topic(), key, { type: 'enterMine' }, 0);
       } else {
         data.fatigue--;
         console.log("Miner " + key + ": ZZZZ... ");
-        ctx.sendMessage(ctx.topic, key, { type: 'stayHome' }, 1000);
+        ctx.sendMessage(ctx.topic(), key, { type: 'stayHome' }, 1000);
       }
     }
   exitHomeAction: >-
@@ -122,7 +135,7 @@ functions:
         data.moneyInBank -= 2;
         console.log("Miner " + key + ": That's mighty fine sippin liquer");
       }
-      ctx.sendMessage(ctx.topic, key, { type: 'enterMine' }, 0);
+      ctx.sendMessage(ctx.topic(), key, { type: 'enterMine' }, 0);
     }
   exitSaloonAction: >-
     (ctx, key, value, data) => {

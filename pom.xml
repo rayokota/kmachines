@@ -39,6 +39,7 @@
     <properties>
         <compiler.dir>${project.build.directory}/compiler</compiler.dir>
         <graalvm.version>20.3.0</graalvm.version>
+        <jackson.version>2.12.3</jackson.version>
         <kafka.version>2.8.0</kafka.version>
         <kafka.scala.version>2.13</kafka.scala.version>
         <kryo.version>4.0.2</kryo.version>
@@ -60,6 +61,24 @@
                 <groupId>org.apache.kafka</groupId>
                 <artifactId>kafka-streams</artifactId>
                 <version>${kafka.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-annotations</artifactId>
+                <version>${jackson.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-databind</artifactId>
+                <version>${jackson.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.fasterxml.jackson.dataformat</groupId>
+                <artifactId>jackson-dataformat-yaml</artifactId>
+                <version>${jackson.version}</version>
             </dependency>
 
             <dependency>

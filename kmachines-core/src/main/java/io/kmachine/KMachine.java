@@ -230,7 +230,7 @@ public class KMachine implements AutoCloseable {
         ) {
             Map<String, Object> data = store.get(readOnlyKey);
             if (data == null) {
-                data = new HashMap<>();
+                data = stateMachine.getData();
             }
             String init = (String) data.getOrDefault(STATE_KEY, stateMachine.getInit());
             Object proxyKey = toProxy(readOnlyKey);
@@ -277,19 +277,21 @@ public class KMachine implements AutoCloseable {
                     stateConfig.onExit(action);
                 }
                 List<Transition> transitions = transitionsByFrom.get(state.getName());
-                for (Transition transition : transitions) {
-                    String type = transition.getType() != null ? transition.getType() : WILDCARD_TYPE;
-                    FuncBoolean guard = transition.getGuard() != null
-                        ? toGuard(transition.getGuard(), key, value, data)
-                        : NO_GUARD;
-                    Action action = transition.getOnTransition() != null
-                        ? toAction(transition.getOnTransition(), key, value, data)
-                        : NO_ACTION;
-                    String to = transition.getTo();
-                    if (to != null) {
-                        stateConfig.permitIf(type, transition.getTo(), guard, action);
-                    } else {
-                        stateConfig.permitInternalIf(type, guard, action);
+                if (transitions != null) {
+                    for (Transition transition : transitions) {
+                        String type = transition.getType() != null ? transition.getType() : WILDCARD_TYPE;
+                        FuncBoolean guard = transition.getGuard() != null
+                            ? toGuard(transition.getGuard(), key, value, data)
+                            : NO_GUARD;
+                        Action action = transition.getOnTransition() != null
+                            ? toAction(transition.getOnTransition(), key, value, data)
+                            : NO_ACTION;
+                        String to = transition.getTo();
+                        if (to != null) {
+                            stateConfig.permitIf(type, transition.getTo(), guard, action);
+                        } else {
+                            stateConfig.permitInternalIf(type, guard, action);
+                        }
                     }
                 }
             }
