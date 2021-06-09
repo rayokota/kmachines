@@ -89,10 +89,6 @@ public class KMachineBasicTest extends AbstractIntegrationTest {
             new Transition("toggle", "on", "off", null, null),
             new Transition("toggle", "off", "on", null, null)
         );
-//        Map<String, String> functions = Map.of(
-//            "turnOn", "(key, value, data) => { data.onEnter = 'turning on'; console.log('turning on') }",
-//            "turnOff", "(key, value, data) => { data.onEnter = 'turning off'; console.log('turning off') } "
-//        );
         Map<String, String> functions = Map.of(
             "turnOn", "(ctx, key, value, data) => { data.onEnter = 'turning on'; console.log('turning on') }",
             "turnOff", "(ctx, key, value, data) => { data.onEnter = 'turning off'; console.log('turning off') } "
