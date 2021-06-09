@@ -44,6 +44,7 @@ import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.kstream.Consumed;
 import org.apache.kafka.streams.kstream.KStream;
 import org.apache.kafka.streams.kstream.Transformer;
+import org.apache.kafka.streams.processor.Processor;
 import org.apache.kafka.streams.processor.ProcessorContext;
 import org.apache.kafka.streams.state.KeyValueStore;
 import org.apache.kafka.streams.state.StoreBuilder;
@@ -186,9 +187,7 @@ public class KMachine implements AutoCloseable {
             .stream(inputTopic, Consumed.with(JSON_SERDE, JSON_SERDE))
             .peek((k, v) -> log.trace("input after topic: (" + k + ", " + v + ")"));
 
-        KStream<JsonNode, JsonNode> transformed = input
-            .flatTransform(ProcessInput::new, storeName)
-            .peek((k, v) -> log.trace("output after process: (" + k + ", " + v + ")"));
+        input.process(ProcessInput::new, storeName);
 
         Topology topology = builder.build();
         log.info("Topology description {}", topology.describe());
@@ -205,8 +204,7 @@ public class KMachine implements AutoCloseable {
         }
     }
 
-    private final class ProcessInput
-        implements Transformer<JsonNode, JsonNode, Iterable<KeyValue<JsonNode, JsonNode>>> {
+    private final class ProcessInput implements Processor<JsonNode, JsonNode> {
 
         private ProcessorContext context;
         private KeyValueStore<JsonNode, Map<String, Object>> store;
@@ -225,9 +223,7 @@ public class KMachine implements AutoCloseable {
         }
 
         @Override
-        public Iterable<KeyValue<JsonNode, JsonNode>> transform(
-            final JsonNode readOnlyKey, final JsonNode value
-        ) {
+        public void process(final JsonNode readOnlyKey, final JsonNode value) {
             Map<String, Object> data = store.get(readOnlyKey);
             if (data == null) {
                 data = stateMachine.getData();
@@ -253,7 +249,6 @@ public class KMachine implements AutoCloseable {
             // Save state and data
             data.put(STATE_KEY, impl.getState());
             store.put(readOnlyKey, data);
-            return null;
         }
 
         private StateMachineConfig<String, String> toConfig(
