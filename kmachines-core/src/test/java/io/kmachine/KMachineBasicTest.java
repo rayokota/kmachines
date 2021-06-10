@@ -29,7 +29,7 @@ import io.kmachine.model.Transition.ToType;
 import io.kmachine.utils.ClientUtils;
 import io.kmachine.utils.JsonSerde;
 import io.kmachine.utils.StreamUtils;
-import org.apache.kafka.common.serialization.LongSerializer;
+import org.apache.kafka.connect.json.JsonSerializer;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.StreamsBuilder;
@@ -60,8 +60,8 @@ public class KMachineBasicTest extends AbstractIntegrationTest {
         String suffix = "";
         StreamsBuilder builder = new StreamsBuilder();
 
-        Properties producerConfig = ClientUtils.producerConfig(CLUSTER.bootstrapServers(), LongSerializer.class,
-            LongSerializer.class, new Properties()
+        Properties producerConfig = ClientUtils.producerConfig(CLUSTER.bootstrapServers(), JsonSerializer.class,
+            JsonSerializer.class, new Properties()
         );
         ObjectNode node1 = MAPPER.createObjectNode();
         node1.put("type", "toggle");

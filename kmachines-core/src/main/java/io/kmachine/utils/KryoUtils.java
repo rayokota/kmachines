@@ -27,13 +27,12 @@ import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayOutputStream;
 import java.util.HashMap;
-import java.util.TreeMap;
 
 public class KryoUtils {
     private static final Logger log = LoggerFactory.getLogger(KryoUtils.class);
 
     // Pool constructor arguments: thread safe, soft references
-    private static final Pool<Kryo> kryoPool = new Pool<Kryo>(true, true) {
+    private static final Pool<Kryo> kryoPool = new Pool<>(true, true) {
         protected Kryo create() {
             Kryo kryo = new Kryo();
             // Configure the Kryo instance.

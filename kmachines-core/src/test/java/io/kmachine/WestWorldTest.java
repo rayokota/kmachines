@@ -27,7 +27,7 @@ import io.kmachine.model.StateMachine;
 import io.kmachine.utils.ClientUtils;
 import io.kmachine.utils.JsonSerde;
 import io.kmachine.utils.StreamUtils;
-import org.apache.kafka.common.serialization.LongSerializer;
+import org.apache.kafka.connect.json.JsonSerializer;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.StreamsBuilder;
@@ -58,8 +58,8 @@ public class WestWorldTest extends AbstractIntegrationTest {
         String suffix = "";
         StreamsBuilder builder = new StreamsBuilder();
 
-        Properties producerConfig = ClientUtils.producerConfig(CLUSTER.bootstrapServers(), LongSerializer.class,
-            LongSerializer.class, new Properties()
+        Properties producerConfig = ClientUtils.producerConfig(CLUSTER.bootstrapServers(), JsonSerializer.class,
+            JsonSerializer.class, new Properties()
         );
         ObjectNode node1 = MAPPER.createObjectNode();
         node1.put("type", "stayHome");
@@ -99,14 +99,14 @@ public class WestWorldTest extends AbstractIntegrationTest {
         String suffix2 = "2";
         StreamsBuilder builder = new StreamsBuilder();
 
-        Properties producerConfig = ClientUtils.producerConfig(CLUSTER.bootstrapServers(), LongSerializer.class,
-            LongSerializer.class, new Properties()
+        Properties producerConfig = ClientUtils.producerConfig(CLUSTER.bootstrapServers(), JsonSerializer.class,
+            JsonSerializer.class, new Properties()
         );
 
         ObjectNode node1 = MAPPER.createObjectNode();
         node1.put("type", "stayHome");
         node1.put("wife", "Elsa");
-        KStream<JsonNode, JsonNode> stream =
+        KStream<JsonNode, JsonNode> stream1 =
             StreamUtils.streamFromCollection(builder, producerConfig, "miner", 3, (short) 1, new JsonSerde(), new JsonSerde(),
                 List.of(
                     new KeyValue<>(new TextNode("Bob"), node1)

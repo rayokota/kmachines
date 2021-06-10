@@ -78,13 +78,12 @@ public class KMachine implements AutoCloseable {
     private static final Action NO_ACTION = () -> {
     };
     private static final FuncBoolean NO_GUARD = () -> true;
-    private static final Action3<String, String, Object[]> UNHANDLED_TRIGGER = (state, trigger, args) -> {
+    private static final Action3<String, String, Object[]> UNHANDLED_TRIGGER = (state, trigger, args) ->
         log.debug(
             String.format(
                 "No valid leaving transitions are permitted from state '%s' for trigger '%s'. Consider ignoring the trigger.",
                 state, trigger)
-        );
-    };
+    );
 
     private static final Serde<JsonNode> JSON_SERDE = new JsonSerde();
     private static final Serde<Map<String, Object>> KRYO_SERDE = new KryoSerde<>();
