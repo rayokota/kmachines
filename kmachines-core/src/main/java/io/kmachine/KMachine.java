@@ -195,7 +195,7 @@ public class KMachine implements AutoCloseable {
         }
     }
 
-    public KMachineState configure(StreamsBuilder builder, Properties streamsConfig) {
+    public KafkaStreams configure(StreamsBuilder builder, Properties streamsConfig) {
         final StoreBuilder<KeyValueStore<JsonNode, Map<String, Object>>> storeBuilder =
             Stores.keyValueStoreBuilder(Stores.persistentKeyValueStore(storeName),
                 JSON_SERDE, KRYO_SERDE
@@ -213,7 +213,7 @@ public class KMachine implements AutoCloseable {
         streams = new KafkaStreams(topology, streamsConfig);
         streams.start();
 
-        return new KMachineState(streams, KMachineState.State.CREATED);
+        return streams;
     }
 
     @Override

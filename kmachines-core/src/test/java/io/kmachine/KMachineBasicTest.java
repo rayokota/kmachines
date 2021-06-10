@@ -99,7 +99,7 @@ public class KMachineBasicTest extends AbstractIntegrationTest {
         machine = new KMachine(null, suffix, CLUSTER.bootstrapServers(), "input", stateMachine);
         streamsConfiguration = ClientUtils.streamsConfig("run-" + suffix, "run-client-" + suffix,
             CLUSTER.bootstrapServers(), JsonSerde.class, JsonSerde.class);
-        streams = machine.configure(new StreamsBuilder(), streamsConfiguration).streams();
+        streams = machine.configure(new StreamsBuilder(), streamsConfiguration);
 
         Thread.sleep(5000);
 

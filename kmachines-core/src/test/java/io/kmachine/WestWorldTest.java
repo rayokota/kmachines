@@ -83,7 +83,7 @@ public class WestWorldTest extends AbstractIntegrationTest {
         KMachine machine = new KMachine(null, suffix, CLUSTER.bootstrapServers(), "miner", stateMachine);
         streamsConfiguration = ClientUtils.streamsConfig("run-" + suffix, "run-client-" + suffix,
             CLUSTER.bootstrapServers(), JsonSerde.class, JsonSerde.class);
-        streams = machine.configure(new StreamsBuilder(), streamsConfiguration).streams();
+        streams = machine.configure(new StreamsBuilder(), streamsConfiguration);
 
         Thread.sleep(30000);
 
@@ -143,7 +143,7 @@ public class WestWorldTest extends AbstractIntegrationTest {
         KMachine machine1 = new KMachine(null, suffix1, CLUSTER.bootstrapServers(), "miner", stateMachine1);
         streamsConfiguration = ClientUtils.streamsConfig("run-" + suffix1, "run-client-" + suffix1,
             CLUSTER.bootstrapServers(), JsonSerde.class, JsonSerde.class);
-        machine1.configure(new StreamsBuilder(), streamsConfiguration).streams();
+        machine1.configure(new StreamsBuilder(), streamsConfiguration);
 
         path = Paths.get(getClass().getResource("miners_wife_messaging.yml").toURI());
         text = Files.readString(path, StandardCharsets.UTF_8);
@@ -152,7 +152,7 @@ public class WestWorldTest extends AbstractIntegrationTest {
         KMachine machine2 = new KMachine(null, suffix2, CLUSTER.bootstrapServers(), "miners_wife", stateMachine2);
         streamsConfiguration = ClientUtils.streamsConfig("run-" + suffix2, "run-client-" + suffix2,
             CLUSTER.bootstrapServers(), JsonSerde.class, JsonSerde.class);
-        streams = machine2.configure(new StreamsBuilder(), streamsConfiguration).streams();
+        streams = machine2.configure(new StreamsBuilder(), streamsConfiguration);
 
         Thread.sleep(30000);
 
