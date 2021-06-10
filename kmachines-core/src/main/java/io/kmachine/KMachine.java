@@ -247,7 +247,7 @@ public class KMachine implements AutoCloseable {
         public void process(final JsonNode readOnlyKey, final JsonNode value) {
             Map<String, Object> data = store.get(readOnlyKey);
             if (data == null) {
-                data = stateMachine.getData();
+                data = new HashMap<>(stateMachine.getData());
             }
             String init = (String) data.getOrDefault(STATE_KEY, stateMachine.getInit());
             Object proxyKey = toProxy(readOnlyKey);

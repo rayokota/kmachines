@@ -126,6 +126,8 @@ functions:
   letsEatAction: >-
     (ctx, key, value, data) => {
       console.log(key + ": StewReady! Lets eat");
-      ctx.sendMessage('miner', data.husband, { type: 'stewReady' }, 0);
+      if (data.husband) {
+        ctx.sendMessage('miner', data.husband, { type: 'stewReady' }, 0);
+      }
       data.cooking = false;
     }

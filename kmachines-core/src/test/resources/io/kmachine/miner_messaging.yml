@@ -122,7 +122,9 @@ functions:
       if (data.location != 'shack') {
         console.log("Miner " + key + ": Walkin' home");
         data.location = 'shack';
-        ctx.sendMessage('miners_wife', data.wife, { type: 'hiHoneyImHome' }, 0);
+        if (data.wife) {
+          ctx.sendMessage('miners_wife', data.wife, { type: 'hiHoneyImHome' }, 0);
+        }
       }
       ctx.sendMessage(ctx.topic(), key, { type: 'stayHome' }, 0);
     }

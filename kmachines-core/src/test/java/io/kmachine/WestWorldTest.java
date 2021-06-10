@@ -154,7 +154,7 @@ public class WestWorldTest extends AbstractIntegrationTest {
             CLUSTER.bootstrapServers(), JsonSerde.class, JsonSerde.class);
         streams = machine2.configure(new StreamsBuilder(), streamsConfiguration).streams();
 
-        Thread.sleep(60000);
+        Thread.sleep(30000);
 
         Map<JsonNode, Map<String, Object>> map = StreamUtils.mapFromStore(streams, "kmachine-" + suffix2);
         log.debug("result: {}", map);
