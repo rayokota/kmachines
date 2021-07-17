@@ -80,7 +80,7 @@ public class WestWorldTest extends AbstractIntegrationTest {
         String text = Files.readString(path, StandardCharsets.UTF_8);
         StateMachine stateMachine = new ObjectMapper(new YAMLFactory()).readValue(text, StateMachine.class);
 
-        KMachine machine = new KMachine(null, suffix, CLUSTER.bootstrapServers(), "miner", stateMachine);
+        KMachine machine = new KMachine(suffix, CLUSTER.bootstrapServers(), stateMachine);
         streamsConfiguration = ClientUtils.streamsConfig("run-" + suffix, "run-client-" + suffix,
             CLUSTER.bootstrapServers(), JsonSerde.class, JsonSerde.class);
         streams = machine.configure(new StreamsBuilder(), streamsConfiguration);
@@ -140,7 +140,7 @@ public class WestWorldTest extends AbstractIntegrationTest {
         String text = Files.readString(path, StandardCharsets.UTF_8);
         StateMachine stateMachine1 = new ObjectMapper(new YAMLFactory()).readValue(text, StateMachine.class);
 
-        KMachine machine1 = new KMachine(null, suffix1, CLUSTER.bootstrapServers(), "miner", stateMachine1);
+        KMachine machine1 = new KMachine(suffix1, CLUSTER.bootstrapServers(), stateMachine1);
         streamsConfiguration = ClientUtils.streamsConfig("run-" + suffix1, "run-client-" + suffix1,
             CLUSTER.bootstrapServers(), JsonSerde.class, JsonSerde.class);
         machine1.configure(new StreamsBuilder(), streamsConfiguration);
@@ -149,7 +149,7 @@ public class WestWorldTest extends AbstractIntegrationTest {
         text = Files.readString(path, StandardCharsets.UTF_8);
         StateMachine stateMachine2 = new ObjectMapper(new YAMLFactory()).readValue(text, StateMachine.class);
 
-        KMachine machine2 = new KMachine(null, suffix2, CLUSTER.bootstrapServers(), "miners_wife", stateMachine2);
+        KMachine machine2 = new KMachine(suffix2, CLUSTER.bootstrapServers(), stateMachine2);
         streamsConfiguration = ClientUtils.streamsConfig("run-" + suffix2, "run-client-" + suffix2,
             CLUSTER.bootstrapServers(), JsonSerde.class, JsonSerde.class);
         streams = machine2.configure(new StreamsBuilder(), streamsConfiguration);

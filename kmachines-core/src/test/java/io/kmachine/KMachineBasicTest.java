@@ -94,9 +94,9 @@ public class KMachineBasicTest extends AbstractIntegrationTest {
             "turnOn", "(ctx, key, value, data) => { data.onEnter = 'turning on'; console.log('turning on') }",
             "turnOff", "(ctx, key, value, data) => { data.onEnter = 'turning off'; console.log('turning off') } "
         );
-        StateMachine stateMachine = new StateMachine("mymachine", "off", states, transitions, null, functions);
+        StateMachine stateMachine = new StateMachine("mymachine", "input", "off", states, transitions, null, functions);
 
-        machine = new KMachine(null, suffix, CLUSTER.bootstrapServers(), "input", stateMachine);
+        machine = new KMachine(suffix, CLUSTER.bootstrapServers(), stateMachine);
         streamsConfiguration = ClientUtils.streamsConfig("run-" + suffix, "run-client-" + suffix,
             CLUSTER.bootstrapServers(), JsonSerde.class, JsonSerde.class);
         streams = machine.configure(new StreamsBuilder(), streamsConfiguration);
@@ -125,9 +125,9 @@ public class KMachineBasicTest extends AbstractIntegrationTest {
             "fun1", "'missing quote",
             "fun2", "functio foo() { console.log }"
         );
-        StateMachine stateMachine = new StateMachine("mymachine", "off", null, null, null, functions);
+        StateMachine stateMachine = new StateMachine("mymachine", "input", "off", null, null, null, functions);
 
-        machine = new KMachine(null, suffix, CLUSTER.bootstrapServers(), "input", stateMachine);
+        machine = new KMachine(suffix, CLUSTER.bootstrapServers(), stateMachine);
     }
 
     @Test(expected = IllegalArgumentException.class)
@@ -141,9 +141,9 @@ public class KMachineBasicTest extends AbstractIntegrationTest {
             new Transition("toggle", "on", "off", ToType.State, null, null),
             new Transition("toggle", "off", "on", ToType.State, null, null)
         );
-        StateMachine stateMachine = new StateMachine("mymachine", "off", states, transitions, null, null);
+        StateMachine stateMachine = new StateMachine("mymachine", "input", "off", states, transitions, null, null);
 
-        machine = new KMachine(null, suffix, CLUSTER.bootstrapServers(), "input", stateMachine);
+        machine = new KMachine(suffix, CLUSTER.bootstrapServers(), stateMachine);
     }
 
     @After

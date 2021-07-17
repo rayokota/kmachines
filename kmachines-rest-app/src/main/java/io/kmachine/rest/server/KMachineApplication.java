@@ -18,12 +18,20 @@
 
 package io.kmachine.rest.server;
 
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
+import io.quarkus.runtime.Quarkus;
+import io.quarkus.runtime.QuarkusApplication;
+import io.quarkus.runtime.annotations.QuarkusMain;
 
-@SpringBootApplication
-public class KMachineApplication {
+@QuarkusMain
+public class KMachineApplication implements QuarkusApplication {
+
+    @Override
+    public int run(String... args) throws Exception {
+        Quarkus.waitForExit();
+        return 0;
+    }
+
     public static void main(String[] args) {
-        SpringApplication.run(KMachineApplication.class, args);
+        Quarkus.run(KMachineApplication.class, args);
     }
 }

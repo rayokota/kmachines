@@ -89,10 +89,8 @@ public class KMachine implements AutoCloseable {
     private static final Serde<Map<String, Object>> KRYO_SERDE = new KryoSerde<>();
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
-    private final String hostAndPort;
     private final String applicationId;
     private final String bootstrapServers;
-    private final String inputTopic;
     private final String storeName;
     private final StateMachine stateMachine;
     private final Engine engine;
@@ -100,15 +98,11 @@ public class KMachine implements AutoCloseable {
     private KStream<JsonNode, JsonNode> input;
     private KafkaStreams streams;
 
-    public KMachine(String hostAndPort,
-                    String applicationId,
+    public KMachine(String applicationId,
                     String bootstrapServers,
-                    String inputTopic,
                     StateMachine stateMachine) {
-        this.hostAndPort = hostAndPort;
         this.applicationId = applicationId;
         this.bootstrapServers = bootstrapServers;
-        this.inputTopic = inputTopic;
         this.stateMachine = stateMachine;
         this.engine = Engine.create();
         this.storeName = "kmachine-" + applicationId;
@@ -123,8 +117,7 @@ public class KMachine implements AutoCloseable {
             String onEntry = state.getOnEntry();
             String onExit = state.getOnExit();
             if (stateName == null) {
-                throw new IllegalArgumentException(
-                    String.format("Invalid name '%s' for state", stateName));
+                throw new IllegalArgumentException("Missing name for state");
             }
             if (onEntry != null && !stateMachine.getFunctions().containsKey(onEntry)) {
                 throw new IllegalArgumentException(
@@ -174,8 +167,7 @@ public class KMachine implements AutoCloseable {
         String name = stateMachine.getName();
         String init = stateMachine.getInit();
         if (name == null) {
-            throw new IllegalArgumentException(
-                String.format("Invalid name '%s' for state machine", name));
+            throw new IllegalArgumentException("Missing name for state machine");
         }
         if (!stateNames.contains(init)) {
             throw new IllegalArgumentException(
@@ -203,7 +195,7 @@ public class KMachine implements AutoCloseable {
         builder.addStateStore(storeBuilder);
 
         this.input = builder
-            .stream(inputTopic, Consumed.with(JSON_SERDE, JSON_SERDE))
+            .stream(stateMachine.getInput(), Consumed.with(JSON_SERDE, JSON_SERDE))
             .peek((k, v) -> log.trace("input after topic: (" + k + ", " + v + ")"));
 
         input.process(ProcessInput::new, storeName);

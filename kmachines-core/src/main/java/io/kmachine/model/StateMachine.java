@@ -33,6 +33,7 @@ import java.util.Objects;
 public class StateMachine {
 
     private String name;
+    private String input;
     private String init;
     private List<State> states;
     private List<Transition> transitions;
@@ -40,6 +41,7 @@ public class StateMachine {
     private Map<String, String> functions;
 
     public StateMachine(@JsonProperty("name") String name,
+                        @JsonProperty("input") String input,
                         @JsonProperty("init") String init,
                         @JsonProperty("states") List<State> states,
                         @JsonProperty("transitions") List<Transition> transitions,
@@ -47,6 +49,7 @@ public class StateMachine {
                         @JsonProperty("functions") Map<String, String> functions) {
         this.name = name;
         this.init = init;
+        this.input = input;
         this.states = states != null ? states : Collections.emptyList();
         this.transitions = transitions != null ? transitions : Collections.emptyList();
         this.data = data != null ? data : Collections.emptyMap();
@@ -68,6 +71,16 @@ public class StateMachine {
     @JsonProperty("name")
     public void setName(String name) {
         this.name = name;
+    }
+
+    @JsonProperty("input")
+    public String getInput() {
+        return input;
+    }
+
+    @JsonProperty("input")
+    public void setInput(String input) {
+        this.input = input;
     }
 
     @JsonProperty("init")

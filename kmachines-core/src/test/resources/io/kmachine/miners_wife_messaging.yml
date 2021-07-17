@@ -1,4 +1,5 @@
 name: minersWife
+input: miners_wife
 init: doHouseWork
 states:
   - name: doHouseWork
