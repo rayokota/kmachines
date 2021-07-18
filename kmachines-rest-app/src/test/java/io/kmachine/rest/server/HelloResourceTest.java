@@ -17,7 +17,7 @@ import static org.awaitility.Awaitility.await;
 @QuarkusTest
 class HelloResourceTest {
 
-    private static final String HELLO_ENDPOINT = "http://localhost:8080/kmachines/hello";
+    private static final String HELLO_ENDPOINT = "http://localhost:8081/kmachines/hello";
 
     @Test
     void testHello() {
