@@ -15,6 +15,7 @@ import org.eclipse.microprofile.config.inject.ConfigProperty;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 import javax.ws.rs.Consumes;
+import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
@@ -46,7 +47,7 @@ public class KMachineResource {
     }
 
     @POST
-    @Consumes("application/yaml")
+    @Consumes("text/yaml")
     @Produces(MediaType.APPLICATION_JSON)
     public Response createKMachine(StateMachine stateMachine) {
         try {
@@ -55,7 +56,7 @@ public class KMachineResource {
             Properties streamsConfiguration = ClientUtils.streamsConfig(id, "client-" + id,
                 manager.bootstrapServers(), JsonSerde.class, JsonSerde.class);
             machine.configure(new StreamsBuilder(), streamsConfiguration);
-            return Response.ok().build();
+            return Response.ok(stateMachine).build();
         } catch (IllegalArgumentException e) {
             return Response.status(Status.CONFLICT.getStatusCode(), e.getMessage()).build();
         }
@@ -76,7 +77,7 @@ public class KMachineResource {
             URI otherUri = getOtherUri(result.getHost().get(), result.getPort().getAsInt(), id);
             return Response.seeOther(otherUri).build();
         } else {
-            return Response.status(Status.NOT_FOUND.getStatusCode(), "No data found for weather station " + id).build();
+            return Response.status(Status.NOT_FOUND.getStatusCode(), "No data found for kmachine " + id).build();
         }
     }
 
@@ -90,10 +91,18 @@ public class KMachineResource {
         return interactiveQueries.getMetaData();
     }
 
+    @DELETE
+    @Path("/{id}")
+    public Response deleteKMachine(@PathParam("id") String id) {
+        KMachine machine = manager.remove(id);
+        machine.close();
+        return Response.noContent().build();
+    }
+
     private URI getOtherUri(String host, int port, String id) {
         try {
             String scheme = (port == sslPort) ? "https" : "http";
-            return new URI(scheme + "://" + host + ":" + port + "/weather-stations/data/" + id);
+            return new URI(scheme + "://" + host + ":" + port + "/kmachines/" + id + "/state");
         } catch (URISyntaxException e) {
             throw new RuntimeException(e);
         }
