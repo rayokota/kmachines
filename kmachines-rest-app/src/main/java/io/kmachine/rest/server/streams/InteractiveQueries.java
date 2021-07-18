@@ -1,7 +1,8 @@
 package io.kmachine.rest.server.streams;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import org.apache.kafka.common.TopicPartition;
-import org.apache.kafka.common.serialization.Serdes;
+import org.apache.kafka.connect.json.JsonSerializer;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.KeyQueryMetadata;
 import org.apache.kafka.streams.StoreQueryParameters;
@@ -11,20 +12,24 @@ import org.apache.kafka.streams.state.ReadOnlyKeyValueStore;
 import org.jboss.logging.Logger;
 import org.wildfly.common.net.HostName;
 
-import javax.enterprise.context.ApplicationScoped;
-import javax.inject.Inject;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 public class InteractiveQueries {
 
     private static final Logger LOG = Logger.getLogger(InteractiveQueries.class);
 
-    KafkaStreams streams;
+    private KafkaStreams streams;
+    private String storeName;
 
-    /*
+    public InteractiveQueries(KafkaStreams streams, String storeName) {
+        this.streams = streams;
+        this.storeName = storeName;
+    }
+
     public List<PipelineMetadata> getMetaData() {
-        return streams.allMetadataForStore(TopologyProducer.WEATHER_STATIONS_STORE)
+        return streams.allMetadataForStore(storeName)
                 .stream()
                 .map(m -> new PipelineMetadata(
                         m.hostInfo().host() + ":" + m.hostInfo().port(),
@@ -35,39 +40,35 @@ public class InteractiveQueries {
                 .collect(Collectors.toList());
     }
 
-    public GetWeatherStationDataResult getWeatherStationData(int id) {
+    public DataResult getData(JsonNode key) {
         KeyQueryMetadata metadata = streams.queryMetadataForKey(
-                TopologyProducer.WEATHER_STATIONS_STORE,
-                id,
-                Serdes.Integer().serializer());
-
+            storeName,
+            key,
+            new JsonSerializer());
         if (metadata == null || metadata == KeyQueryMetadata.NOT_AVAILABLE) {
-            LOG.warnv("Found no metadata for key {0}", id);
-            return GetWeatherStationDataResult.notFound();
+            LOG.warnv("Found no metadata for key {0}", key);
+            return DataResult.notFound();
         } else if (metadata.activeHost().host().equals(HostName.getQualifiedHostName())) {
-            LOG.infov("Found data for key {0} locally", id);
-            Aggregation result = getWeatherStationStore().get(id);
-
-            if (result != null) {
-                return GetWeatherStationDataResult.found(WeatherStationData.from(result));
+            LOG.infov("Found data for key {0} locally", key);
+            Map<String, Object> data = getDataStore().get(key);
+            if (data != null) {
+                return DataResult.found(data);
             } else {
-                return GetWeatherStationDataResult.notFound();
+                return DataResult.notFound();
             }
         } else {
-            LOG.infov("Found data for key {0} on remote host {1}:{2}", id, metadata.activeHost().host(), metadata.activeHost().port());
-            return GetWeatherStationDataResult.foundRemotely(metadata.activeHost().host(), metadata.activeHost().port());
+            LOG.infov("Found data for key {0} on remote host {1}:{2}", key, metadata.activeHost().host(), metadata.activeHost().port());
+            return DataResult.foundRemotely(metadata.activeHost().host(), metadata.activeHost().port());
         }
     }
 
-    private ReadOnlyKeyValueStore<Integer, Aggregation> getWeatherStationStore() {
+    private ReadOnlyKeyValueStore<JsonNode, Map<String, Object>> getDataStore() {
         while (true) {
             try {
-                return streams.store(StoreQueryParameters.fromNameAndType(TopologyProducer.WEATHER_STATIONS_STORE, QueryableStoreTypes.keyValueStore()));
+                return streams.store(StoreQueryParameters.fromNameAndType(storeName, QueryableStoreTypes.keyValueStore()));
             } catch (InvalidStateStoreException e) {
                 // ignore, store not ready yet
             }
         }
     }
-
-     */
 }

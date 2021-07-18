@@ -187,6 +187,22 @@ public class KMachine implements AutoCloseable {
         }
     }
 
+    public String getApplicationId() {
+        return applicationId;
+    }
+
+    public String getStoreName() {
+        return storeName;
+    }
+
+    public StateMachine getStateMachine() {
+        return stateMachine;
+    }
+
+    public KafkaStreams getStreams() {
+        return streams;
+    }
+
     public KafkaStreams configure(StreamsBuilder builder, Properties streamsConfig) {
         final StoreBuilder<KeyValueStore<JsonNode, Map<String, Object>>> storeBuilder =
             Stores.keyValueStoreBuilder(Stores.persistentKeyValueStore(storeName),
@@ -212,6 +228,7 @@ public class KMachine implements AutoCloseable {
     public void close() {
         if (streams != null) {
             streams.close();
+            streams = null;
         }
         engine.close();
     }

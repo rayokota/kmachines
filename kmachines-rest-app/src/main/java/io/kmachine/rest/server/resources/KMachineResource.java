@@ -1,11 +1,14 @@
 package io.kmachine.rest.server.resources;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import io.kmachine.KMachine;
 import io.kmachine.model.StateMachine;
 import io.kmachine.rest.server.KMachineManager;
+import io.kmachine.rest.server.streams.DataResult;
+import io.kmachine.rest.server.streams.InteractiveQueries;
+import io.kmachine.rest.server.streams.PipelineMetadata;
 import io.kmachine.utils.ClientUtils;
 import io.kmachine.utils.JsonSerde;
-import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
@@ -17,7 +20,6 @@ import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
-import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
@@ -32,17 +34,9 @@ public class KMachineResource {
 
     @Inject
     KMachineManager manager;
-    /*
-    @Inject
-    InteractiveQueries interactiveQueries;
 
-     */
-
-    /*
     @ConfigProperty(name = "quarkus.http.ssl-port")
     int sslPort;
-
-     */
 
     @GET
     @Path("/hello")
@@ -67,16 +61,17 @@ public class KMachineResource {
         }
     }
 
-    /*
-    @GET
-    @Path("/data/{id}")
+    @POST
+    @Path("/{id}/state")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public Response getWeatherStationData(@PathParam("id") int id) {
-        GetWeatherStationDataResult result = interactiveQueries.getWeatherStationData(id);
-
-        if (result.getResult().isPresent()) {
-            return Response.ok(result.getResult().get()).build();
+    public Response getKMachineState(@PathParam("id") String id, JsonNode key) {
+        KMachine machine = manager.get(id);
+        InteractiveQueries interactiveQueries =
+            new InteractiveQueries(machine.getStreams(), machine.getStoreName());
+        DataResult result = interactiveQueries.getData(key);
+        if (result.getData().isPresent()) {
+            return Response.ok(result.getData().get()).build();
         } else if (result.getHost().isPresent()) {
             URI otherUri = getOtherUri(result.getHost().get(), result.getPort().getAsInt(), id);
             return Response.seeOther(otherUri).build();
@@ -86,13 +81,16 @@ public class KMachineResource {
     }
 
     @GET
-    @Path("/meta-data")
+    @Path("/{id}/meta-data")
     @Produces(MediaType.APPLICATION_JSON)
-    public List<PipelineMetadata> getMetaData() {
+    public List<PipelineMetadata> getMetaData(@PathParam("id") String id) {
+        KMachine machine = manager.get(id);
+        InteractiveQueries interactiveQueries =
+            new InteractiveQueries(machine.getStreams(), machine.getStoreName());
         return interactiveQueries.getMetaData();
     }
 
-    private URI getOtherUri(String host, int port, int id) {
+    private URI getOtherUri(String host, int port, String id) {
         try {
             String scheme = (port == sslPort) ? "https" : "http";
             return new URI(scheme + "://" + host + ":" + port + "/weather-stations/data/" + id);
@@ -100,6 +98,4 @@ public class KMachineResource {
             throw new RuntimeException(e);
         }
     }
-
-     */
 }
