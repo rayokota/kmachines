@@ -25,6 +25,7 @@ import org.eclipse.microprofile.config.inject.ConfigProperty;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 @ApplicationScoped
@@ -46,6 +47,10 @@ public class KMachineManager {
         KMachine m = new KMachine(id, bootstrapServers(), stateMachine);
         machines.put(id, m);
         return m;
+    }
+
+    public Set<String> list() {
+        return machines.keySet();
     }
 
     public KMachine get(String id) {

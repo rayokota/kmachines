@@ -29,7 +29,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.Properties;
-import java.util.concurrent.CopyOnWriteArrayList;
 
 @QuarkusTest
 class KMachineResourceTest {
@@ -101,22 +100,4 @@ class KMachineResourceTest {
 
         Thread.sleep(30000);
     }
-    /*
-    private static final String PRICES_SSE_ENDPOINT = "http://localhost:8081/prices/stream";
-
-    @Test
-    void testPricesEventStream() {
-        Client client = ClientBuilder.newClient();
-        WebTarget target = client.target(PRICES_SSE_ENDPOINT);
-
-        List<Double> received = new CopyOnWriteArrayList<>();
-
-        SseEventSource source = SseEventSource.target(target).build();
-        source.register(inboundSseEvent -> received.add(Double.valueOf(inboundSseEvent.readData())));
-        source.open();
-        await().atMost(100000, MILLISECONDS).until(() -> received.size() == 3);
-        source.close();
-    }
-
-     */
 }

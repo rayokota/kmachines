@@ -39,13 +39,6 @@ public class KMachineResource {
     @ConfigProperty(name = "quarkus.http.ssl-port")
     int sslPort;
 
-    @GET
-    @Path("/hello")
-    @Produces("html/text")
-    public Response getHello() {
-        return Response.ok("Hello", "html/text").build();
-    }
-
     @POST
     @Consumes("text/yaml")
     @Produces(MediaType.APPLICATION_JSON)
@@ -60,6 +53,12 @@ public class KMachineResource {
         } catch (IllegalArgumentException e) {
             return Response.status(Status.CONFLICT.getStatusCode(), e.getMessage()).build();
         }
+    }
+
+    @GET
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response getKMachines() {
+        return Response.ok(manager.list()).build();
     }
 
     @POST
