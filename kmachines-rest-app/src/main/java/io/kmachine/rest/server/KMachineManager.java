@@ -18,15 +18,25 @@
 
 package io.kmachine.rest.server;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import io.kcache.KafkaCache;
+import io.kcache.KafkaCacheConfig;
+import io.kcache.utils.InMemoryCache;
 import io.kmachine.KMachine;
 import io.kmachine.model.StateMachine;
+import io.kmachine.utils.JsonSerde;
+import org.apache.kafka.common.serialization.Serdes;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
+import org.jboss.logging.annotations.Pos;
 
+import javax.annotation.PostConstruct;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
+import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 @ApplicationScoped
 public class KMachineManager {
@@ -34,10 +44,37 @@ public class KMachineManager {
     @ConfigProperty(name = "kafka.bootstrap.servers")
     String bootstrapServers;
 
+    @Inject
+    private KMachineConfig config;
+
+    private KafkaCacheConfig cacheConfig;
+    private KafkaCache<String, JsonNode> cache;
     private Map<String, KMachine> machines = new ConcurrentHashMap<>();
+
+    @PostConstruct
+    public void init() {
+        String topic = "_kmachines";
+        String groupId = "kmachine-1";
+        Map<String, String> configs = config.kafkaCacheConfig().entrySet().stream()
+            .collect(Collectors.toMap(e -> "kafkacache." + e.getKey(), Map.Entry::getValue));
+        configs.put(KafkaCacheConfig.KAFKACACHE_BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+        configs.put(KafkaCacheConfig.KAFKACACHE_TOPIC_CONFIG, topic);
+        configs.put(KafkaCacheConfig.KAFKACACHE_GROUP_ID_CONFIG, groupId);
+        configs.put(KafkaCacheConfig.KAFKACACHE_CLIENT_ID_CONFIG, groupId + "-" + topic);
+        cacheConfig = new KafkaCacheConfig(configs);
+        cache = new KafkaCache<>(cacheConfig, Serdes.String(), new JsonSerde(), null, new InMemoryCache<>());
+    }
 
     public String bootstrapServers() {
         return bootstrapServers;
+    }
+
+    public KafkaCacheConfig cacheConfig() {
+        return cacheConfig;
+    }
+
+    public void sync() {
+        cache.sync();
     }
 
     public KMachine create(String id, StateMachine stateMachine) {

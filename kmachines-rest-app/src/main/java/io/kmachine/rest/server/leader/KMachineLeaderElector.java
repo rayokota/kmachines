@@ -19,6 +19,7 @@ package io.kmachine.rest.server.leader;
 
 import io.kcache.KafkaCacheConfig;
 import io.kmachine.rest.server.KMachineConfig;
+import io.kmachine.rest.server.KMachineManager;
 import org.apache.kafka.clients.ApiVersions;
 import org.apache.kafka.clients.ClientDnsLookup;
 import org.apache.kafka.clients.ClientUtils;
@@ -69,6 +70,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 
 @ApplicationScoped
 public class KMachineLeaderElector implements KMachineRebalanceListener, Closeable {
@@ -76,15 +78,14 @@ public class KMachineLeaderElector implements KMachineRebalanceListener, Closeab
     private static final Logger LOG = LoggerFactory.getLogger(KMachineLeaderElector.class);
 
     private static final AtomicInteger KDB_CLIENT_ID_SEQUENCE = new AtomicInteger(1);
-    private static final String JMX_PREFIX = "kareldb";
+    private static final String JMX_PREFIX = "kmachine";
 
-    @ConfigProperty(name = "kafka.bootstrap.servers")
-    private String bootstrapServers;
+    @Inject
+    private KMachineManager manager;
 
     @Inject
     private KMachineConfig config;
 
-    private final KafkaCacheConfig kafkaCacheConfig;
     private final int initTimeout;
     private final String clientId;
     private final ConsumerNetworkClient client;
@@ -104,10 +105,6 @@ public class KMachineLeaderElector implements KMachineRebalanceListener, Closeab
 
     public KMachineLeaderElector() throws KMachineElectionException {
         try {
-            Map<String, String> props = new HashMap<>(config.kafkaCacheConfig());
-            props.put(KafkaCacheConfig.KAFKACACHE_BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
-            this.kafkaCacheConfig = new KafkaCacheConfig(props);
-
             this.clientId = "kdb-" + KDB_CLIENT_ID_SEQUENCE.getAndIncrement();
 
             this.listeners = parseListeners(config.listeners());
@@ -129,7 +126,7 @@ public class KMachineLeaderElector implements KMachineRebalanceListener, Closeab
             this.metrics = new Metrics(metricConfig, reporters, time, metricsContext);
             this.retryBackoffMs = clientConfig.getLong(CommonClientConfigs.RETRY_BACKOFF_MS_CONFIG);
             String groupId = config.clusterGroupId();
-            LogContext logContext = new LogContext("[KarelDB clientId=" + clientId + ", groupId="
+            LogContext logContext = new LogContext("[KMachine clientId=" + clientId + ", groupId="
                 + groupId + "] ");
             this.metadata = new Metadata(
                 retryBackoffMs,
@@ -137,11 +134,11 @@ public class KMachineLeaderElector implements KMachineRebalanceListener, Closeab
                 logContext,
                 new ClusterResourceListeners()
             );
-            List<String> brokers = Arrays.asList(bootstrapServers.split(","));
+            List<String> brokers = Arrays.asList(manager.bootstrapServers().split(","));
             List<InetSocketAddress> addresses = ClientUtils.parseAndValidateAddresses(brokers,
                 clientConfig.getString(CommonClientConfigs.CLIENT_DNS_LOOKUP_CONFIG));
             this.metadata.bootstrap(addresses);
-            String metricGrpPrefix = "kareldb";
+            String metricGrpPrefix = "kmachine";
 
             ChannelBuilder channelBuilder = ClientUtils.createChannelBuilder(
                 clientConfig,
@@ -193,7 +190,7 @@ public class KMachineLeaderElector implements KMachineRebalanceListener, Closeab
 
             AppInfoParser.registerAppInfo(JMX_PREFIX, clientId, metrics, time.milliseconds());
 
-            initTimeout = kafkaCacheConfig.getInt(KafkaCacheConfig.KAFKACACHE_INIT_TIMEOUT_CONFIG);
+            initTimeout = manager.cacheConfig().getInt(KafkaCacheConfig.KAFKACACHE_INIT_TIMEOUT_CONFIG);
 
             LOG.debug("Group member created");
         } catch (Throwable t) {
@@ -364,6 +361,7 @@ public class KMachineLeaderElector implements KMachineRebalanceListener, Closeab
         synchronized (this) {
             if (!isLeader() && myIdentity.equals(leader)) {
                 LOG.info("Syncing caches...");
+                manager.sync();
             }
 
             this.leader = leader;
