@@ -22,10 +22,12 @@ public class InteractiveQueries {
 
     private KafkaStreams streams;
     private String storeName;
+    private int port;
 
-    public InteractiveQueries(KafkaStreams streams, String storeName) {
+    public InteractiveQueries(KafkaStreams streams, String storeName, int port) {
         this.streams = streams;
         this.storeName = storeName;
+        this.port = port;
     }
 
     public List<PipelineMetadata> getMetaData() {
@@ -48,7 +50,8 @@ public class InteractiveQueries {
         if (metadata == null || metadata == KeyQueryMetadata.NOT_AVAILABLE) {
             LOG.warnv("Found no metadata for key {0}", key);
             return DataResult.notFound();
-        } else if (metadata.activeHost().host().equals(HostName.getQualifiedHostName())) {
+        } else if (metadata.activeHost().host().equals(HostName.getQualifiedHostName())
+            && metadata.activeHost().port() == port) {
             LOG.infov("Found data for key {0} locally", key);
             Map<String, Object> data = getDataStore().get(key);
             if (data != null) {

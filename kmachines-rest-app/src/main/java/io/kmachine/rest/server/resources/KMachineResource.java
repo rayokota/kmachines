@@ -6,11 +6,12 @@ import io.kmachine.model.StateMachine;
 import io.kmachine.rest.server.KMachineManager;
 import io.kmachine.rest.server.streams.DataResult;
 import io.kmachine.rest.server.streams.InteractiveQueries;
-import io.kmachine.rest.server.streams.PipelineMetadata;
 import io.kmachine.utils.ClientUtils;
 import io.kmachine.utils.JsonSerde;
 import org.apache.kafka.streams.StreamsBuilder;
+import org.apache.kafka.streams.StreamsConfig;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
+import org.wildfly.common.net.HostName;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
@@ -26,7 +27,6 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.List;
 import java.util.Properties;
 
 @ApplicationScoped
@@ -35,6 +35,9 @@ public class KMachineResource {
 
     @Inject
     KMachineManager manager;
+
+    @ConfigProperty(name = "quarkus.http.port")
+    int port;
 
     @ConfigProperty(name = "quarkus.http.ssl-port")
     int sslPort;
@@ -48,11 +51,16 @@ public class KMachineResource {
             KMachine machine = manager.create(stateMachine.getName(), stateMachine);
             Properties streamsConfiguration = ClientUtils.streamsConfig(id, "client-" + id,
                 manager.bootstrapServers(), JsonSerde.class, JsonSerde.class);
+            streamsConfiguration.put(StreamsConfig.APPLICATION_SERVER_CONFIG, getApplicationServer());
             machine.configure(new StreamsBuilder(), streamsConfiguration);
             return Response.ok(stateMachine).build();
         } catch (IllegalArgumentException e) {
             return Response.status(Status.CONFLICT.getStatusCode(), e.getMessage()).build();
         }
+    }
+
+    private String getApplicationServer() {
+        return HostName.getQualifiedHostName() + ":" + port;
     }
 
     @GET
@@ -67,8 +75,11 @@ public class KMachineResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Response getKMachineState(@PathParam("id") String id, JsonNode key) {
         KMachine machine = manager.get(id);
+        if (machine == null) {
+            return Response.status(Status.NOT_FOUND.getStatusCode(), "No kmachine found for " + id).build();
+        }
         InteractiveQueries interactiveQueries =
-            new InteractiveQueries(machine.getStreams(), machine.getStoreName());
+            new InteractiveQueries(machine.getStreams(), machine.getStoreName(), port);
         DataResult result = interactiveQueries.getData(key);
         if (result.getData().isPresent()) {
             return Response.ok(result.getData().get()).build();
@@ -83,11 +94,14 @@ public class KMachineResource {
     @GET
     @Path("/{id}/meta-data")
     @Produces(MediaType.APPLICATION_JSON)
-    public List<PipelineMetadata> getMetaData(@PathParam("id") String id) {
+    public Response getMetaData(@PathParam("id") String id) {
         KMachine machine = manager.get(id);
+        if (machine == null) {
+            return Response.status(Status.NOT_FOUND.getStatusCode(), "No kmachine found for " + id).build();
+        }
         InteractiveQueries interactiveQueries =
-            new InteractiveQueries(machine.getStreams(), machine.getStoreName());
-        return interactiveQueries.getMetaData();
+            new InteractiveQueries(machine.getStreams(), machine.getStoreName(), port);
+        return Response.ok(interactiveQueries.getMetaData()).build();
     }
 
     @DELETE
