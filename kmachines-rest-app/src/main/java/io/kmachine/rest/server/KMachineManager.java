@@ -19,21 +19,26 @@
 package io.kmachine.rest.server;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import io.kcache.CacheUpdateHandler;
 import io.kcache.KafkaCache;
 import io.kcache.KafkaCacheConfig;
 import io.kcache.utils.InMemoryCache;
 import io.kmachine.KMachine;
 import io.kmachine.model.StateMachine;
+import io.kmachine.utils.ClientUtils;
 import io.kmachine.utils.JsonSerde;
+import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.serialization.Serdes;
+import org.apache.kafka.streams.StreamsBuilder;
+import org.apache.kafka.streams.StreamsConfig;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
-import org.jboss.logging.annotations.Pos;
+import org.wildfly.common.net.HostName;
 
 import javax.annotation.PostConstruct;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
-import java.util.Collections;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
@@ -44,12 +49,18 @@ public class KMachineManager {
     @ConfigProperty(name = "kafka.bootstrap.servers")
     String bootstrapServers;
 
+    @ConfigProperty(name = "quarkus.http.port")
+    int port;
+
+    @ConfigProperty(name = "quarkus.http.ssl-port")
+    int sslPort;
+
     @Inject
-    private KMachineConfig config;
+    KMachineConfig config;
 
     private KafkaCacheConfig cacheConfig;
     private KafkaCache<String, JsonNode> cache;
-    private Map<String, KMachine> machines = new ConcurrentHashMap<>();
+    private final Map<String, KMachine> machines = new ConcurrentHashMap<>();
 
     @PostConstruct
     public void init() {
@@ -62,7 +73,14 @@ public class KMachineManager {
         configs.put(KafkaCacheConfig.KAFKACACHE_GROUP_ID_CONFIG, groupId);
         configs.put(KafkaCacheConfig.KAFKACACHE_CLIENT_ID_CONFIG, groupId + "-" + topic);
         cacheConfig = new KafkaCacheConfig(configs);
-        cache = new KafkaCache<>(cacheConfig, Serdes.String(), new JsonSerde(), null, new InMemoryCache<>());
+        KMachineUpdateHandler updateHandler = new KMachineUpdateHandler();
+        cache = new KafkaCache<>(cacheConfig, Serdes.String(), new JsonSerde(),
+            updateHandler, new InMemoryCache<>());
+        cache.init();
+    }
+
+    private String applicationServer() {
+        return HostName.getQualifiedHostName() + ":" + port;
     }
 
     public String bootstrapServers() {
@@ -77,24 +95,45 @@ public class KMachineManager {
         cache.sync();
     }
 
-    public KMachine create(String id, StateMachine stateMachine) {
-        if (machines.containsKey(id)) {
+    public void create(String id, StateMachine stateMachine) {
+        if (cache.containsKey(id)) {
             throw new IllegalArgumentException("KMachine already exists with id: " + id);
         }
-        KMachine m = new KMachine(id, bootstrapServers(), stateMachine);
-        machines.put(id, m);
-        return m;
+        cache.put(id, stateMachine.toJsonNode());
     }
 
     public Set<String> list() {
-        return machines.keySet();
+        return cache.keySet();
     }
 
     public KMachine get(String id) {
         return machines.get(id);
     }
 
-    public KMachine remove(String id) {
-        return machines.remove(id);
+    public void remove(String id) {
+        cache.remove(id);
+    }
+
+    class KMachineUpdateHandler implements CacheUpdateHandler<String, JsonNode> {
+
+        @Override
+        public void handleUpdate(String key, JsonNode value, JsonNode oldValue,
+                                 TopicPartition tp, long offset, long timestamp) {
+            if (value == null) {
+                KMachine machine = machines.remove(key);
+                if (machine != null) {
+                    machine.close();
+                }
+            } else {
+                StateMachine stateMachine = StateMachine.fromJsonNode(value);
+                String id = stateMachine.getName();
+                KMachine machine = new KMachine(id, bootstrapServers(), stateMachine);
+                machines.put(id, machine);
+                Properties streamsConfiguration = ClientUtils.streamsConfig(id, "client-" + id,
+                    bootstrapServers(), JsonSerde.class, JsonSerde.class);
+                streamsConfiguration.put(StreamsConfig.APPLICATION_SERVER_CONFIG, applicationServer());
+                machine.configure(new StreamsBuilder(), streamsConfiguration);
+            }
+        }
     }
 }

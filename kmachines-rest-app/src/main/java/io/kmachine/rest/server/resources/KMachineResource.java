@@ -3,15 +3,13 @@ package io.kmachine.rest.server.resources;
 import com.fasterxml.jackson.databind.JsonNode;
 import io.kmachine.KMachine;
 import io.kmachine.model.StateMachine;
+import io.kmachine.rest.KMachineInterface;
 import io.kmachine.rest.server.KMachineManager;
+import io.kmachine.rest.server.leader.KMachineLeaderElector;
 import io.kmachine.rest.server.streams.DataResult;
 import io.kmachine.rest.server.streams.InteractiveQueries;
-import io.kmachine.utils.ClientUtils;
-import io.kmachine.utils.JsonSerde;
-import org.apache.kafka.streams.StreamsBuilder;
-import org.apache.kafka.streams.StreamsConfig;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
-import org.wildfly.common.net.HostName;
+import org.jboss.resteasy.client.jaxrs.ResteasyWebTarget;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
@@ -22,19 +20,25 @@ import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
+import javax.ws.rs.client.Client;
+import javax.ws.rs.client.ClientBuilder;
+import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.Properties;
 
 @ApplicationScoped
 @Path("/kmachines")
-public class KMachineResource {
+public class KMachineResource implements KMachineInterface {
 
     @Inject
     KMachineManager manager;
+
+    @Inject
+    KMachineLeaderElector elector;
 
     @ConfigProperty(name = "quarkus.http.port")
     int port;
@@ -47,20 +51,11 @@ public class KMachineResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Response createKMachine(StateMachine stateMachine) {
         try {
-            String id = stateMachine.getName();
-            KMachine machine = manager.create(stateMachine.getName(), stateMachine);
-            Properties streamsConfiguration = ClientUtils.streamsConfig(id, "client-" + id,
-                manager.bootstrapServers(), JsonSerde.class, JsonSerde.class);
-            streamsConfiguration.put(StreamsConfig.APPLICATION_SERVER_CONFIG, getApplicationServer());
-            machine.configure(new StreamsBuilder(), streamsConfiguration);
+            manager.create(stateMachine.getName(), stateMachine);
             return Response.ok(stateMachine).build();
         } catch (IllegalArgumentException e) {
             return Response.status(Status.CONFLICT.getStatusCode(), e.getMessage()).build();
         }
-    }
-
-    private String getApplicationServer() {
-        return HostName.getQualifiedHostName() + ":" + port;
     }
 
     @GET
@@ -73,7 +68,9 @@ public class KMachineResource {
     @Path("/{id}/state")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public Response getKMachineState(@PathParam("id") String id, JsonNode key) {
+    public Response getKMachineState(@PathParam("id") String id,
+                                     @QueryParam("redirect") boolean redirect,
+                                     JsonNode key) {
         KMachine machine = manager.get(id);
         if (machine == null) {
             return Response.status(Status.NOT_FOUND.getStatusCode(), "No kmachine found for " + id).build();
@@ -85,7 +82,15 @@ public class KMachineResource {
             return Response.ok(result.getData().get()).build();
         } else if (result.getHost().isPresent()) {
             URI otherUri = getOtherUri(result.getHost().get(), result.getPort().getAsInt(), id);
-            return Response.seeOther(otherUri).build();
+            if (redirect) {
+                return Response.seeOther(otherUri).build();
+            } else {
+                Client client = ClientBuilder.newClient();
+                WebTarget target = client.target(otherUri);
+                ResteasyWebTarget rtarget = (ResteasyWebTarget) target;
+                KMachineInterface kmachine = rtarget.proxy(KMachineInterface.class);
+                return kmachine.getKMachineState(id, redirect, key);
+            }
         } else {
             return Response.status(Status.NOT_FOUND.getStatusCode(), "No data found for kmachine " + id).build();
         }
@@ -107,8 +112,7 @@ public class KMachineResource {
     @DELETE
     @Path("/{id}")
     public Response deleteKMachine(@PathParam("id") String id) {
-        KMachine machine = manager.remove(id);
-        machine.close();
+        manager.remove(id);
         return Response.noContent().build();
     }
 

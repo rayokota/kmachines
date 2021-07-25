@@ -20,9 +20,9 @@ public class InteractiveQueries {
 
     private static final Logger LOG = Logger.getLogger(InteractiveQueries.class);
 
-    private KafkaStreams streams;
-    private String storeName;
-    private int port;
+    private final KafkaStreams streams;
+    private final String storeName;
+    private final int port;
 
     public InteractiveQueries(KafkaStreams streams, String storeName, int port) {
         this.streams = streams;

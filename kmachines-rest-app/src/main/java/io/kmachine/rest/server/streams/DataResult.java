@@ -6,7 +6,7 @@ import java.util.OptionalInt;
 
 public class DataResult {
 
-    private static DataResult NOT_FOUND = new DataResult(null, null, null);
+    private static final DataResult NOT_FOUND = new DataResult(null, null, null);
 
     private final Map<String, Object> data;
     private final String host;

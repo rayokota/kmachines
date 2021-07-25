@@ -31,6 +31,8 @@ import java.util.List;
  */
 class KMachineProtocol {
 
+    private static final ObjectMapper MAPPER = new ObjectMapper();
+
     public static ByteBuffer serializeMetadata(KMachineIdentity identity) {
         return identity.toJsonBytes();
     }
@@ -78,7 +80,7 @@ class KMachineProtocol {
             try {
                 byte[] jsonBytes = new byte[json.remaining()];
                 json.get(jsonBytes);
-                return new ObjectMapper().readValue(jsonBytes, Assignment.class);
+                return MAPPER.readValue(jsonBytes, Assignment.class);
             } catch (IOException e) {
                 throw new IllegalArgumentException("Error deserializing identity information", e);
             }

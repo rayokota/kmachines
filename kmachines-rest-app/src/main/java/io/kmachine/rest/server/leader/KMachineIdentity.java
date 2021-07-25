@@ -31,6 +31,8 @@ public class KMachineIdentity {
 
     public static final int CURRENT_VERSION = 1;
 
+    private static final ObjectMapper MAPPER = new ObjectMapper();
+
     private Integer version;
     private String scheme;
     private String host;
@@ -51,14 +53,14 @@ public class KMachineIdentity {
     }
 
     public static KMachineIdentity fromJson(String json) throws IOException {
-        return new ObjectMapper().readValue(json, KMachineIdentity.class);
+        return MAPPER.readValue(json, KMachineIdentity.class);
     }
 
     public static KMachineIdentity fromJson(ByteBuffer json) {
         try {
             byte[] jsonBytes = new byte[json.remaining()];
             json.get(jsonBytes);
-            return new ObjectMapper().readValue(jsonBytes, KMachineIdentity.class);
+            return MAPPER.readValue(jsonBytes, KMachineIdentity.class);
         } catch (IOException e) {
             throw new IllegalArgumentException("Error deserializing identity information", e);
         }
@@ -169,12 +171,12 @@ public class KMachineIdentity {
     }
 
     public String toJson() throws IOException {
-        return new ObjectMapper().writeValueAsString(this);
+        return MAPPER.writeValueAsString(this);
     }
 
     public ByteBuffer toJsonBytes() {
         try {
-            return ByteBuffer.wrap(new ObjectMapper().writeValueAsBytes(this));
+            return ByteBuffer.wrap(MAPPER.writeValueAsBytes(this));
         } catch (IOException e) {
             throw new IllegalArgumentException("Error serializing identity information", e);
         }

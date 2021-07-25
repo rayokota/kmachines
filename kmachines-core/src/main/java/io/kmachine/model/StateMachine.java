@@ -22,7 +22,10 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
+import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -31,6 +34,8 @@ import java.util.Objects;
 @JsonInclude(Include.NON_NULL)
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class StateMachine {
+
+    private static final ObjectMapper MAPPER = new ObjectMapper();
 
     private String name;
     private String input;
@@ -150,4 +155,14 @@ public class StateMachine {
     public int hashCode() {
         return Objects.hash(name, init, states, transitions, data, functions);
     }
+
+    public JsonNode toJsonNode() {
+        return MAPPER.convertValue(this, JsonNode.class);
+
+    }
+
+    public static StateMachine fromJsonNode(JsonNode json) {
+        return MAPPER.convertValue(json, StateMachine.class);
+    }
+
 }

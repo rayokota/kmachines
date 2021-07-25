@@ -41,7 +41,6 @@ import org.apache.kafka.common.network.Selector;
 import org.apache.kafka.common.utils.AppInfoParser;
 import org.apache.kafka.common.utils.LogContext;
 import org.apache.kafka.common.utils.Time;
-import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -58,7 +57,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -70,7 +68,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.Collectors;
 
 @ApplicationScoped
 public class KMachineLeaderElector implements KMachineRebalanceListener, Closeable {
@@ -81,20 +78,20 @@ public class KMachineLeaderElector implements KMachineRebalanceListener, Closeab
     private static final String JMX_PREFIX = "kmachine";
 
     @Inject
-    private KMachineManager manager;
+    KMachineConfig config;
 
     @Inject
-    private KMachineConfig config;
+    KMachineManager manager;
 
-    private final int initTimeout;
-    private final String clientId;
-    private final ConsumerNetworkClient client;
-    private final Metrics metrics;
-    private final Metadata metadata;
-    private final long retryBackoffMs;
-    private final KMachineCoordinator coordinator;
-    private final List<URI> listeners;
-    private final KMachineIdentity myIdentity;
+    private int initTimeout;
+    private String clientId;
+    private ConsumerNetworkClient client;
+    private Metrics metrics;
+    private Metadata metadata;
+    private long retryBackoffMs;
+    private KMachineCoordinator coordinator;
+    private List<URI> listeners;
+    private KMachineIdentity myIdentity;
     private KMachineIdentity leader;
     private final Map<KMachineIdentity, Integer> members = new ConcurrentHashMap<>();
     private int generationId;
@@ -103,7 +100,7 @@ public class KMachineLeaderElector implements KMachineRebalanceListener, Closeab
     private ExecutorService executor;
     private final CountDownLatch joinedLatch = new CountDownLatch(1);
 
-    public KMachineLeaderElector() throws KMachineElectionException {
+    public void configure() throws KMachineElectionException {
         try {
             this.clientId = "kdb-" + KDB_CLIENT_ID_SEQUENCE.getAndIncrement();
 
@@ -245,6 +242,8 @@ public class KMachineLeaderElector implements KMachineRebalanceListener, Closeab
 
     @PostConstruct
     public void init() throws KMachineElectionException {
+        configure();
+
         LOG.debug("Initializing group member");
 
         executor = Executors.newSingleThreadExecutor();
