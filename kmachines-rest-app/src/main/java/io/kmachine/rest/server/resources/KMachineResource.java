@@ -1,17 +1,17 @@
 package io.kmachine.rest.server.resources;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import io.kmachine.KMachine;
 import io.kmachine.model.StateMachine;
+import io.kmachine.rest.KMachineInterface;
 import io.kmachine.rest.server.KMachineManager;
-import io.kmachine.rest.server.leader.KMachineIdentity;
 import io.kmachine.rest.server.leader.KMachineLeaderElector;
 import io.kmachine.rest.server.streams.DataResult;
 import io.kmachine.rest.server.streams.InteractiveQueries;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
+import org.eclipse.microprofile.rest.client.RestClientBuilder;
 import org.jboss.logging.Logger;
 
 import javax.enterprise.context.ApplicationScoped;
@@ -24,22 +24,15 @@ import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
-import javax.ws.rs.client.Client;
-import javax.ws.rs.client.ClientBuilder;
-import javax.ws.rs.client.Entity;
-import javax.ws.rs.client.WebTarget;
-import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
-import javax.ws.rs.core.UriBuilder;
-import javax.ws.rs.core.UriInfo;
 import java.net.URI;
 import java.net.URISyntaxException;
 
 @ApplicationScoped
 @Path("/kmachines")
-public class KMachineResource {
+public class KMachineResource implements KMachineInterface {
 
     private static final Logger LOG = Logger.getLogger(KMachineResource.class);
 
@@ -57,7 +50,7 @@ public class KMachineResource {
     @POST
     @Consumes("text/yaml")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response createKMachine(@Context UriInfo info, StateMachine stateMachine) {
+    public Response createKMachine(StateMachine stateMachine) {
         if (elector.isLeader()) {
             try {
                 LOG.info("Creating machine " + stateMachine.getName());
@@ -69,23 +62,9 @@ public class KMachineResource {
         } else {
             Response response = null;
             try {
-                URI leaderURI = getLeaderUri(elector.getLeader(), info);
-                Client client = ClientBuilder.newClient();
-                WebTarget target = client.target(leaderURI);
-                // Note: couldn't get proxy to work
-                /*
-                ResteasyWebTarget rtarget = (ResteasyWebTarget) target;
-                KMachineInterface proxy = rtarget.proxy(KMachineInterface.class);
-                response = proxy.createKMachine(stateMachine);
-                return response;
-                */
-                String text = MAPPER.writeValueAsString(stateMachine);
-                response = target.request().post(Entity.entity(text, "text/yaml"));
+                response = getClient(getLeaderUri()).createKMachine(stateMachine);
                 response.bufferEntity();
-                Response.ResponseBuilder responseBuilder = Response.fromResponse(response);
-                return responseBuilder.build();
-            } catch (JsonProcessingException e) {
-                throw new RuntimeException(e);
+                return Response.fromResponse(response).build();
             } finally {
                 if (response != null) {
                     response.close();
@@ -117,24 +96,15 @@ public class KMachineResource {
         if (result.getData().isPresent()) {
             return Response.ok(result.getData().get()).build();
         } else if (result.getHost().isPresent()) {
-            URI otherUri = getOtherUri(result.getHost().get(), result.getPort().getAsInt(), id);
+            URI otherUri = getOtherUri(result.getHost().get(), result.getPort().getAsInt());
             if (redirect) {
-                return Response.seeOther(otherUri).build();
+                return Response.seeOther(otherUri.resolve("kmachines/" + id + "/state")).build();
             } else {
                 Response response = null;
                 try {
-                    Client client = ClientBuilder.newClient();
-                    WebTarget target = client.target(otherUri);
-                    // Note: couldn't get proxy to work
-                    /*
-                    ResteasyWebTarget rtarget = (ResteasyWebTarget) target;
-                    KMachineInterface proxy = rtarget.proxy(KMachineInterface.class);
-                    response = proxy.getKMachineState(id, redirect, key);
-                    */
-                    response = target.request().post(Entity.entity(key, MediaType.APPLICATION_JSON_TYPE));
+                    response = getClient(otherUri).getKMachineState(id, redirect, key);
                     response.bufferEntity();
-                    Response.ResponseBuilder responseBuilder = Response.fromResponse(response);
-                    return responseBuilder.build();
+                    return Response.fromResponse(response).build();
                 } finally {
                     if (response != null) {
                         response.close();
@@ -161,7 +131,7 @@ public class KMachineResource {
 
     @DELETE
     @Path("/{id}")
-    public Response deleteKMachine(@Context UriInfo info, @PathParam("id") String id) {
+    public Response deleteKMachine(@PathParam("id") String id) {
         if (elector.isLeader()) {
             LOG.info("Deleting machine " + id);
             manager.remove(id);
@@ -169,19 +139,9 @@ public class KMachineResource {
         } else {
             Response response = null;
             try {
-                URI leaderURI = getLeaderUri(elector.getLeader(), info);
-                Client client = ClientBuilder.newClient();
-                WebTarget target = client.target(leaderURI);
-                // Note: couldn't get proxy to work
-                /*
-                ResteasyWebTarget rtarget = (ResteasyWebTarget) target;
-                KMachineInterface proxy = rtarget.proxy(KMachineInterface.class);
-                response = proxy.deleteKMachine(id);
-                */
-                response = target.request().delete();
+                response = getClient(getLeaderUri()).deleteKMachine(id);
                 response.bufferEntity();
-                Response.ResponseBuilder responseBuilder = Response.fromResponse(response);
-                return responseBuilder.build();
+                return Response.fromResponse(response).build();
             } finally {
                 if (response != null) {
                     response.close();
@@ -190,16 +150,24 @@ public class KMachineResource {
         }
     }
 
-    private URI getLeaderUri(KMachineIdentity leader, UriInfo info) {
-        URI uri = info.getRequestUri();
-        UriBuilder uriBuilder = UriBuilder.fromUri(uri).uri(leader.getUrl());
-        return uriBuilder.build();
+    private KMachineInterface getClient(URI uri) {
+        return RestClientBuilder.newBuilder()
+            .baseUri(uri)
+            .build(KMachineInterface.class);
     }
 
-    private URI getOtherUri(String host, int port, String id) {
+    private URI getLeaderUri() {
+        try {
+            return new URI(elector.getLeader().getUrl());
+        } catch (URISyntaxException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private URI getOtherUri(String host, int port) {
         try {
             String scheme = (port == sslPort) ? "https" : "http";
-            return new URI(scheme + "://" + host + ":" + port + "/kmachines/" + id + "/state");
+            return new URI(scheme + "://" + host + ":" + port + "/");
         } catch (URISyntaxException e) {
             throw new RuntimeException(e);
         }
