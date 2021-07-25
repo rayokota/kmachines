@@ -3,6 +3,7 @@ package io.kmachine.rest.server.resources;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import com.fasterxml.jackson.jaxrs.yaml.YAMLMediaTypes;
 import io.kmachine.KMachine;
 import io.kmachine.model.StateMachine;
 import io.kmachine.rest.KMachineInterface;
@@ -48,7 +49,7 @@ public class KMachineResource implements KMachineInterface {
     int sslPort;
 
     @POST
-    @Consumes("text/yaml")
+    @Consumes(YAMLMediaTypes.TEXT_JACKSON_YAML)
     @Produces(MediaType.APPLICATION_JSON)
     public Response createKMachine(StateMachine stateMachine) {
         if (elector.isLeader()) {
@@ -60,15 +61,9 @@ public class KMachineResource implements KMachineInterface {
                 return Response.status(Status.CONFLICT.getStatusCode(), e.getMessage()).build();
             }
         } else {
-            Response response = null;
-            try {
-                response = getClient(getLeaderUri()).createKMachine(stateMachine);
+            try (Response response = getClient(getLeaderUri()).createKMachine(stateMachine)) {
                 response.bufferEntity();
                 return Response.fromResponse(response).build();
-            } finally {
-                if (response != null) {
-                    response.close();
-                }
             }
         }
     }
@@ -100,15 +95,9 @@ public class KMachineResource implements KMachineInterface {
             if (redirect) {
                 return Response.seeOther(otherUri.resolve("kmachines/" + id + "/state")).build();
             } else {
-                Response response = null;
-                try {
-                    response = getClient(otherUri).getKMachineState(id, redirect, key);
+                try (Response response = getClient(otherUri).getKMachineState(id, redirect, key)) {
                     response.bufferEntity();
                     return Response.fromResponse(response).build();
-                } finally {
-                    if (response != null) {
-                        response.close();
-                    }
                 }
             }
         } else {
@@ -137,15 +126,9 @@ public class KMachineResource implements KMachineInterface {
             manager.remove(id);
             return Response.noContent().build();
         } else {
-            Response response = null;
-            try {
-                response = getClient(getLeaderUri()).deleteKMachine(id);
+            try (Response response = getClient(getLeaderUri()).deleteKMachine(id)) {
                 response.bufferEntity();
                 return Response.fromResponse(response).build();
-            } finally {
-                if (response != null) {
-                    response.close();
-                }
             }
         }
     }

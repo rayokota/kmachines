@@ -1,6 +1,7 @@
 package io.kmachine.rest;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.jaxrs.yaml.YAMLMediaTypes;
 import io.kmachine.model.StateMachine;
 
 import javax.ws.rs.Consumes;
@@ -14,11 +15,12 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
+
 @Path("/kmachines")
 public interface KMachineInterface {
 
     @POST
-    @Consumes("text/yaml")
+    @Consumes(YAMLMediaTypes.TEXT_JACKSON_YAML)
     @Produces(MediaType.APPLICATION_JSON)
     Response createKMachine(StateMachine stateMachine);
 
