@@ -10,7 +10,6 @@ import org.apache.kafka.streams.errors.InvalidStateStoreException;
 import org.apache.kafka.streams.state.QueryableStoreTypes;
 import org.apache.kafka.streams.state.ReadOnlyKeyValueStore;
 import org.jboss.logging.Logger;
-import org.wildfly.common.net.HostName;
 
 import java.util.List;
 import java.util.Map;
@@ -22,11 +21,13 @@ public class InteractiveQueries {
 
     private final KafkaStreams streams;
     private final String storeName;
+    private final String host;
     private final int port;
 
-    public InteractiveQueries(KafkaStreams streams, String storeName, int port) {
+    public InteractiveQueries(KafkaStreams streams, String storeName, String host, int port) {
         this.streams = streams;
         this.storeName = storeName;
+        this.host = host;
         this.port = port;
     }
 
@@ -50,7 +51,7 @@ public class InteractiveQueries {
         if (metadata == null || metadata == KeyQueryMetadata.NOT_AVAILABLE) {
             LOG.warnv("Found no metadata for key {0}", key);
             return DataResult.notFound();
-        } else if (metadata.activeHost().host().equals(HostName.getQualifiedHostName())
+        } else if (metadata.activeHost().host().equals(host)
             && metadata.activeHost().port() == port) {
             LOG.infov("Found data for key {0} locally", key);
             Map<String, Object> data = getDataStore().get(key);

@@ -28,15 +28,17 @@ import io.kmachine.model.StateMachine;
 import io.kmachine.utils.ClientUtils;
 import io.kmachine.utils.JsonSerde;
 import org.apache.kafka.common.TopicPartition;
+import org.apache.kafka.common.config.ConfigException;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.StreamsConfig;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
-import org.wildfly.common.net.HostName;
 
 import javax.annotation.PostConstruct;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
@@ -79,8 +81,20 @@ public class KMachineManager {
         cache.init();
     }
 
-    private String applicationServer() {
-        return HostName.getQualifiedHostName() + ":" + port;
+    public String applicationServer() {
+        return host() + ":" + port;
+    }
+
+    public String host() {
+        return config.hostName().orElse(getDefaultHost());
+    }
+
+    private static String getDefaultHost() {
+        try {
+            return InetAddress.getLocalHost().getCanonicalHostName();
+        } catch (UnknownHostException e) {
+            throw new ConfigException("Unknown local hostname", e);
+        }
     }
 
     public String bootstrapServers() {

@@ -20,6 +20,7 @@ package io.kmachine.rest.server.leader;
 import io.kcache.KafkaCacheConfig;
 import io.kmachine.rest.server.KMachineConfig;
 import io.kmachine.rest.server.KMachineManager;
+import io.quarkus.runtime.Startup;
 import org.apache.kafka.clients.ApiVersions;
 import org.apache.kafka.clients.ClientDnsLookup;
 import org.apache.kafka.clients.ClientUtils;
@@ -69,6 +70,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
+@Startup
 @ApplicationScoped
 public class KMachineLeaderElector implements KMachineRebalanceListener, Closeable {
 
@@ -107,7 +109,7 @@ public class KMachineLeaderElector implements KMachineRebalanceListener, Closeab
             this.listeners = parseListeners(config.listeners());
             this.myIdentity = findIdentity(
                 listeners,
-                config.hostName().orElse(getDefaultHost()),
+                manager.host(),
                 config.isLeaderEligible());
 
             Map<String, String> metricsTags = new LinkedHashMap<>();
@@ -296,6 +298,7 @@ public class KMachineLeaderElector implements KMachineRebalanceListener, Closeab
                     setLeader(assignment.leaderIdentity());
                     setMembers(assignment.members());
                     LOG.info(isLeader() ? "Registered as leader" : "Registered as replica");
+                    LOG.info("Number of members: " + getMembers().size());
                     joinedLatch.countDown();
                     break;
                 case KMachineProtocol.Assignment.DUPLICATE_URLS:
@@ -349,11 +352,15 @@ public class KMachineLeaderElector implements KMachineRebalanceListener, Closeab
     }
 
     public synchronized boolean isLeader() {
-        return myIdentity.equals(leader);
+        return leader == null || myIdentity.equals(leader);
     }
 
     public synchronized int getLeaderId() {
         return leader != null ? members.getOrDefault(leader, 0) : 0;
+    }
+
+    public KMachineIdentity getLeader() {
+        return leader != null ? leader : myIdentity;
     }
 
     private synchronized void setLeader(KMachineIdentity leader) {
@@ -430,14 +437,6 @@ public class KMachineLeaderElector implements KMachineRebalanceListener, Closeab
                 firstException.compareAndSet(null, t);
                 LOG.error("Failed to close {} with type {}", name, closeable.getClass().getName(), t);
             }
-        }
-    }
-
-    private static String getDefaultHost() {
-        try {
-            return InetAddress.getLocalHost().getCanonicalHostName();
-        } catch (UnknownHostException e) {
-            throw new ConfigException("Unknown local hostname", e);
         }
     }
 }
