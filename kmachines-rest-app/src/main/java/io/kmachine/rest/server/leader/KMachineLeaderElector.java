@@ -49,11 +49,9 @@ import javax.annotation.PostConstruct;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 import java.io.Closeable;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -92,7 +90,6 @@ public class KMachineLeaderElector implements KMachineRebalanceListener, Closeab
     private Metadata metadata;
     private long retryBackoffMs;
     private KMachineCoordinator coordinator;
-    private List<URI> listeners;
     private KMachineIdentity myIdentity;
     private KMachineIdentity leader;
     private final Map<KMachineIdentity, Integer> members = new ConcurrentHashMap<>();
@@ -106,11 +103,7 @@ public class KMachineLeaderElector implements KMachineRebalanceListener, Closeab
         try {
             this.clientId = "kdb-" + KDB_CLIENT_ID_SEQUENCE.getAndIncrement();
 
-            this.listeners = parseListeners(config.listeners());
-            this.myIdentity = findIdentity(
-                listeners,
-                manager.host(),
-                config.isLeaderEligible());
+            this.myIdentity = findIdentity(manager.uri(), config.isLeaderEligible());
 
             Map<String, String> metricsTags = new LinkedHashMap<>();
             metricsTags.put("client-id", clientId);
@@ -201,45 +194,8 @@ public class KMachineLeaderElector implements KMachineRebalanceListener, Closeab
         }
     }
 
-    static KMachineIdentity findIdentity(List<URI> listeners, String host, boolean leaderEligibility) {
-        for (URI listener : listeners) {
-            return new KMachineIdentity(listener.getScheme(), host, listener.getPort(), leaderEligibility);
-        }
-        throw new ConfigException("No listeners are configured. Must have at least one listener.");
-    }
-
-    static List<URI> parseListeners(List<String> listenersConfig) {
-        List<URI> listeners = new ArrayList<>(listenersConfig.size());
-        for (String listenerStr : listenersConfig) {
-            URI uri;
-            try {
-                uri = new URI(listenerStr);
-            } catch (URISyntaxException use) {
-                throw new ConfigException(
-                    "Could not parse a listener URI from the `listener` configuration option."
-                );
-            }
-            String scheme = uri.getScheme();
-            if (scheme == null) {
-                throw new ConfigException(
-                    "Found a listener without a scheme. All listeners must have a scheme. The "
-                        + "listener without a scheme is: " + listenerStr
-                );
-            }
-            if (uri.getPort() == -1) {
-                throw new ConfigException(
-                    "Found a listener without a port. All listeners must have a port. The "
-                        + "listener without a port is: " + listenerStr
-                );
-            }
-            listeners.add(uri);
-        }
-
-        if (listeners.isEmpty()) {
-            throw new ConfigException("No listeners are configured. Must have at least one listener.");
-        }
-
-        return listeners;
+    static KMachineIdentity findIdentity(URI uri, boolean leaderEligibility) {
+        return new KMachineIdentity(uri.getScheme(), uri.getHost(), uri.getPort(), leaderEligibility);
     }
 
     @PostConstruct
@@ -345,10 +301,6 @@ public class KMachineLeaderElector implements KMachineRebalanceListener, Closeab
 
     public int getMemberId() {
         return members.getOrDefault(getIdentity(), 0);
-    }
-
-    public List<URI> getListeners() {
-        return listeners;
     }
 
     public synchronized boolean isLeader() {

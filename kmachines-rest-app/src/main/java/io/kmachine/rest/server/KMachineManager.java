@@ -38,6 +38,8 @@ import javax.annotation.PostConstruct;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 import java.net.InetAddress;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.UnknownHostException;
 import java.util.Map;
 import java.util.Properties;
@@ -56,6 +58,9 @@ public class KMachineManager {
 
     @ConfigProperty(name = "quarkus.http.ssl-port")
     int sslPort;
+
+    @ConfigProperty(name = "quarkus.http.insecure-requests")
+    String insecureRequests;
 
     @Inject
     KMachineConfig config;
@@ -81,12 +86,25 @@ public class KMachineManager {
         cache.init();
     }
 
+    public URI uri() {
+        try {
+            String scheme = "enabled".equalsIgnoreCase(insecureRequests) ? "http" : "https";
+            return new URI(scheme + "://" + host() + ":" + port());
+        } catch (URISyntaxException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     public String applicationServer() {
-        return host() + ":" + port;
+        return host() + ":" + port();
     }
 
     public String host() {
         return config.hostName().orElse(getDefaultHost());
+    }
+
+    public int port() {
+        return "enabled".equalsIgnoreCase(insecureRequests) ? this.port : this.sslPort;
     }
 
     private static String getDefaultHost() {

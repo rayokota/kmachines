@@ -31,12 +31,6 @@ public interface KMachineConfig {
     @WithName("host.name")
     Optional<String> hostName();
 
-    // List of listeners. http and https are supported. Each listener must include the protocol
-    // hostname, and port. For example: http://myhost:8080, https://0.0.0.0:8081
-    @WithName("listeners")
-    @WithDefault("http://0.0.0.0:8765")
-    List<String> listeners();
-
     // The group ID used for leader election.
     @WithName("cluster.group.id")
     @WithDefault("kmachine")

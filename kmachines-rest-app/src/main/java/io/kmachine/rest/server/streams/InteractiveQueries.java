@@ -11,6 +11,7 @@ import org.apache.kafka.streams.state.QueryableStoreTypes;
 import org.apache.kafka.streams.state.ReadOnlyKeyValueStore;
 import org.jboss.logging.Logger;
 
+import java.net.URI;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -21,14 +22,12 @@ public class InteractiveQueries {
 
     private final KafkaStreams streams;
     private final String storeName;
-    private final String host;
-    private final int port;
+    private final URI uri;
 
-    public InteractiveQueries(KafkaStreams streams, String storeName, String host, int port) {
+    public InteractiveQueries(KafkaStreams streams, String storeName, URI uri) {
         this.streams = streams;
         this.storeName = storeName;
-        this.host = host;
-        this.port = port;
+        this.uri = uri;
     }
 
     public List<PipelineMetadata> getMetaData() {
@@ -51,8 +50,8 @@ public class InteractiveQueries {
         if (metadata == null || metadata == KeyQueryMetadata.NOT_AVAILABLE) {
             LOG.warnv("Found no metadata for key {0}", key);
             return DataResult.notFound();
-        } else if (metadata.activeHost().host().equals(host)
-            && metadata.activeHost().port() == port) {
+        } else if (metadata.activeHost().host().equals(uri.getHost())
+            && metadata.activeHost().port() == uri.getPort()) {
             LOG.infov("Found data for key {0} locally", key);
             Map<String, Object> data = getDataStore().get(key);
             if (data != null) {

@@ -6,7 +6,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import io.kmachine.KMachine;
 import io.kmachine.model.StateMachine;
-import io.kmachine.rest.KMachineInterface;
 import io.kmachine.rest.server.KMachineManager;
 import io.kmachine.rest.server.leader.KMachineIdentity;
 import io.kmachine.rest.server.leader.KMachineLeaderElector;
@@ -14,9 +13,6 @@ import io.kmachine.rest.server.streams.DataResult;
 import io.kmachine.rest.server.streams.InteractiveQueries;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.jboss.logging.Logger;
-import org.jboss.resteasy.client.jaxrs.ResteasyClient;
-import org.jboss.resteasy.client.jaxrs.ResteasyClientBuilder;
-import org.jboss.resteasy.client.jaxrs.ResteasyWebTarget;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
@@ -54,9 +50,6 @@ public class KMachineResource {
 
     @Inject
     KMachineLeaderElector elector;
-
-    @ConfigProperty(name = "quarkus.http.port")
-    int port;
 
     @ConfigProperty(name = "quarkus.http.ssl-port")
     int sslPort;
@@ -119,7 +112,7 @@ public class KMachineResource {
             return Response.status(Status.NOT_FOUND.getStatusCode(), "No kmachine found for " + id).build();
         }
         InteractiveQueries interactiveQueries =
-            new InteractiveQueries(machine.getStreams(), machine.getStoreName(), manager.host(), port);
+            new InteractiveQueries(machine.getStreams(), machine.getStoreName(), manager.uri());
         DataResult result = interactiveQueries.getData(key);
         if (result.getData().isPresent()) {
             return Response.ok(result.getData().get()).build();
@@ -162,7 +155,7 @@ public class KMachineResource {
             return Response.status(Status.NOT_FOUND.getStatusCode(), "No kmachine found for " + id).build();
         }
         InteractiveQueries interactiveQueries =
-            new InteractiveQueries(machine.getStreams(), machine.getStoreName(), manager.host(), port);
+            new InteractiveQueries(machine.getStreams(), machine.getStoreName(), manager.uri());
         return Response.ok(interactiveQueries.getMetaData()).build();
     }
 
