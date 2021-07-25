@@ -308,7 +308,7 @@ public class KMachineLeaderElector implements KMachineRebalanceListener, Closeab
         return leader != null ? members.getOrDefault(leader, 0) : 0;
     }
 
-    public KMachineIdentity getLeader() {
+    public synchronized KMachineIdentity getLeader() {
         return leader != null ? leader : myIdentity;
     }
 
