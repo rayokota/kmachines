@@ -39,7 +39,7 @@
     <properties>
         <compiler.dir>${project.build.directory}/compiler</compiler.dir>
         <graalvm.version>21.2.0</graalvm.version>
-        <jackson.version>2.12.3</jackson.version>
+        <jackson.version>2.12.4</jackson.version>
         <kafka.version>2.8.0</kafka.version>
         <kafka.scala.version>2.13</kafka.scala.version>
         <kryo.version>5.1.1</kryo.version>
