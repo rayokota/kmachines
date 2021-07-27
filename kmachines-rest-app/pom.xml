@@ -5,7 +5,7 @@
     <parent>
         <artifactId>kmachines-parent</artifactId>
         <groupId>io.kmachine</groupId>
-        <version>0.0.2-SNAPSHOT</version>
+        <version>0.0.2</version>
     </parent>
 
     <groupId>io.kmachine</groupId>
