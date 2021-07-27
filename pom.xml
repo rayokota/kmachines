@@ -4,7 +4,7 @@
 
     <groupId>io.kmachine</groupId>
     <artifactId>kmachines-parent</artifactId>
-    <version>0.0.2</version>
+    <version>0.0.3-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>kmachines</name>
@@ -28,7 +28,7 @@
         <connection>scm:git:git://github.com:rayokota/kmachines.git</connection>
         <developerConnection>scm:git:git@github.com:rayokota/kmachines.git</developerConnection>
         <url>git@github.com:rayokota/kmachines.git</url>
-        <tag>kmachines-parent-0.0.2</tag>
+        <tag>HEAD</tag>
     </scm>
 
     <modules>
