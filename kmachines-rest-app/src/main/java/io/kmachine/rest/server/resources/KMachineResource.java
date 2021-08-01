@@ -6,7 +6,7 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.fasterxml.jackson.jaxrs.yaml.YAMLMediaTypes;
 import io.kmachine.KMachine;
 import io.kmachine.model.StateMachine;
-import io.kmachine.rest.KMachineInterface;
+import io.kmachine.rest.KMachineService;
 import io.kmachine.rest.server.KMachineManager;
 import io.kmachine.rest.server.leader.KMachineLeaderElector;
 import io.kmachine.rest.server.streams.DataResult;
@@ -33,7 +33,7 @@ import java.net.URISyntaxException;
 
 @ApplicationScoped
 @Path("/kmachines")
-public class KMachineResource implements KMachineInterface {
+public class KMachineResource implements KMachineService {
 
     private static final Logger LOG = Logger.getLogger(KMachineResource.class);
 
@@ -133,10 +133,10 @@ public class KMachineResource implements KMachineInterface {
         }
     }
 
-    private KMachineInterface getClient(URI uri) {
+    private KMachineService getClient(URI uri) {
         return RestClientBuilder.newBuilder()
             .baseUri(uri)
-            .build(KMachineInterface.class);
+            .build(KMachineService.class);
     }
 
     private URI getLeaderUri() {

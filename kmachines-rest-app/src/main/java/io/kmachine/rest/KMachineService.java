@@ -17,7 +17,7 @@ import javax.ws.rs.core.Response;
 
 
 @Path("/kmachines")
-public interface KMachineInterface {
+public interface KMachineService {
 
     @POST
     @Consumes(YAMLMediaTypes.TEXT_JACKSON_YAML)
