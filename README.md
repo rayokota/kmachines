@@ -24,3 +24,5 @@ Releases of KMachines are deployed to Maven Central.
     <version>0.0.2</version>
 </dependency>
 ```
+
+For more info on KMachines, see this [blog post](https://yokota.blog/2021/08/02/the-enterprise-is-made-of-events-not-things/).
