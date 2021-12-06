@@ -120,7 +120,7 @@ public class StreamUtils {
 
         try (final KeyValueIterator<K, V> all = store.all()) {
             List<KeyValue<K, V>> result = new ArrayList<>();
-            while (all.hasNext()) {
+            while (all != null && all.hasNext()) {
                 result.add(all.next());
             }
             return result;
@@ -137,7 +137,7 @@ public class StreamUtils {
 
         try (final KeyValueIterator<K, V> all = store.all()) {
             Map<K, V> result = new HashMap<>();
-            while (all.hasNext()) {
+            while (all != null && all.hasNext()) {
                 KeyValue<K, V> next = all.next();
                 result.put(next.key, next.value);
             }
