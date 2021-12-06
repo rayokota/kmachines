@@ -38,8 +38,8 @@
 
     <properties>
         <compiler.dir>${project.build.directory}/compiler</compiler.dir>
-        <graalvm.version>21.2.0</graalvm.version>
-        <jackson.version>2.12.5</jackson.version>
+        <graalvm.version>21.3.0</graalvm.version>
+        <jackson.version>2.13.0</jackson.version>
         <kafka.version>3.0.0</kafka.version>
         <kafka.scala.version>2.13</kafka.scala.version>
         <kryo.version>5.2.0</kryo.version>
@@ -102,13 +102,13 @@
             <dependency>
                 <groupId>ch.qos.logback</groupId>
                 <artifactId>logback-core</artifactId>
-                <version>1.2.6</version>
+                <version>1.2.7</version>
             </dependency>
 
             <dependency>
                 <groupId>ch.qos.logback</groupId>
                 <artifactId>logback-classic</artifactId>
-                <version>1.2.6</version>
+                <version>1.2.7</version>
             </dependency>
 
             <dependency>
@@ -407,7 +407,7 @@
             <plugin>
                 <groupId>com.github.spotbugs</groupId>
                 <artifactId>spotbugs-maven-plugin</artifactId>
-                <version>4.4.1</version>
+                <version>4.5.0.0</version>
                 <configuration>
                     <effort>Max</effort>
                     <threshold>Default</threshold>
