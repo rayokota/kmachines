@@ -4,4 +4,10 @@
         <Class name="io.kmachine.rest.server.actuator.KafkaHealthIndicator"/>
         <Bug pattern="REC_CATCH_EXCEPTION"/>
     </Match>
+    <Match>
+        <Bug pattern="EI_EXPOSE_REP"/>
+    </Match>
+    <Match>
+        <Bug pattern="EI_EXPOSE_REP2"/>
+    </Match>
 </FindBugsFilter>

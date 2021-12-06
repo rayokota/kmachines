@@ -22,7 +22,6 @@ import io.kmachine.rest.server.KMachineConfig;
 import io.kmachine.rest.server.KMachineManager;
 import io.quarkus.runtime.Startup;
 import org.apache.kafka.clients.ApiVersions;
-import org.apache.kafka.clients.ClientDnsLookup;
 import org.apache.kafka.clients.ClientUtils;
 import org.apache.kafka.clients.CommonClientConfigs;
 import org.apache.kafka.clients.Metadata;
@@ -147,7 +146,6 @@ public class KMachineLeaderElector implements KMachineRebalanceListener, Closeab
                 clientConfig.getInt(CommonClientConfigs.REQUEST_TIMEOUT_MS_CONFIG),
                 10000L,
                 127000L,
-                ClientDnsLookup.forConfig(clientConfig.getString(CommonClientConfigs.CLIENT_DNS_LOOKUP_CONFIG)),
                 time,
                 true,
                 new ApiVersions(),
