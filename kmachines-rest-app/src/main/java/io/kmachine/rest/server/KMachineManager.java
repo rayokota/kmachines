@@ -75,6 +75,11 @@ public class KMachineManager {
         String groupId = "kmachine-1";
         Map<String, String> configs = config.kafkaCacheConfig().entrySet().stream()
             .collect(Collectors.toMap(e -> "kafkacache." + e.getKey(), Map.Entry::getValue));
+        // Strip out protocol
+        int index = bootstrapServers.indexOf("//");
+        String bootstrapServers = index >= 0
+            ? this.bootstrapServers.substring(index + 2)
+            : this.bootstrapServers;
         configs.put(KafkaCacheConfig.KAFKACACHE_BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         configs.put(KafkaCacheConfig.KAFKACACHE_TOPIC_CONFIG, topic);
         configs.put(KafkaCacheConfig.KAFKACACHE_GROUP_ID_CONFIG, groupId);
