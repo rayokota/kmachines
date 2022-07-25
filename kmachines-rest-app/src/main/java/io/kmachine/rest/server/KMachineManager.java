@@ -129,6 +129,7 @@ public class KMachineManager {
     }
 
     public void sync() {
+        cache.reset();
         cache.sync();
     }
 
