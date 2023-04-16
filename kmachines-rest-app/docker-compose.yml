@@ -37,10 +37,7 @@ services:
     depends_on:
       - kafka
       - zookeeper
-    command: "bash -c 'echo Waiting for Kafka to be ready... && \
-                       cub zk-ready zookeeper:32181 20 && \
-                       cub kafka-ready -b kafka:29092 1 20 && \
-                       /usr/bin/java -Dfile.encoding=UTF-8 -Dserver.port=8888 -jar app.jar'"
+    command: "bash -c 'echo Waiting for Kafka to be ready... && cub zk-ready zookeeper:32181 20 && cub kafka-ready -b kafka:29092 1 20 && /usr/bin/java -Dfile.encoding=UTF-8 -Dserver.port=8888 -jar app.jar'"
     ports:
       - '8888:8888'
     environment:
@@ -56,10 +53,7 @@ services:
     depends_on:
       - kafka
       - zookeeper
-    command: "bash -c 'echo Waiting for Kafka to be ready... && \
-                       cub zk-ready zookeeper:32181 20 && \
-                       cub kafka-ready -b kafka:29092 1 20 && \
-                       /usr/bin/java -Dfile.encoding=UTF-8 -Dserver.port=8889 -jar app.jar'"
+    command: "bash -c 'echo Waiting for Kafka to be ready... && cub zk-ready zookeeper:32181 20 && cub kafka-ready -b kafka:29092 1 20 && /usr/bin/java -Dfile.encoding=UTF-8 -Dserver.port=8889 -jar app.jar'"
     ports:
       - '8889:8889'
     environment:
