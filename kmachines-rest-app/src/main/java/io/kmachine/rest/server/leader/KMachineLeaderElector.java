@@ -86,6 +86,7 @@ public class KMachineLeaderElector implements KMachineRebalanceListener, Closeab
     private Metrics metrics;
     private Metadata metadata;
     private long retryBackoffMs;
+    private long retryBackoffMaxMs;
     private KMachineCoordinator coordinator;
     private KMachineIdentity myIdentity;
     private KMachineIdentity leader;
@@ -114,11 +115,13 @@ public class KMachineLeaderElector implements KMachineRebalanceListener, Closeab
 
             this.metrics = new Metrics(metricConfig, reporters, time, metricsContext);
             this.retryBackoffMs = clientConfig.getLong(CommonClientConfigs.RETRY_BACKOFF_MS_CONFIG);
+            this.retryBackoffMaxMs = clientConfig.getLong(CommonClientConfigs.RETRY_BACKOFF_MAX_MS_CONFIG);
             String groupId = config.clusterGroupId();
             LogContext logContext = new LogContext("[KMachine clientId=" + clientId + ", groupId="
                 + groupId + "] ");
             this.metadata = new Metadata(
                 retryBackoffMs,
+                retryBackoffMaxMs,
                 clientConfig.getLong(CommonClientConfigs.METADATA_MAX_AGE_CONFIG),
                 logContext,
                 new ClusterResourceListeners()
@@ -172,6 +175,7 @@ public class KMachineLeaderElector implements KMachineRebalanceListener, Closeab
                 metricGrpPrefix,
                 time,
                 retryBackoffMs,
+                retryBackoffMaxMs,
                 myIdentity,
                 this
             );
